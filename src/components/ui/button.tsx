@@ -9,10 +9,11 @@ type Size = "default" | "sm" | "icon";
  * par écran, tout le reste en hairline ou fantôme. Pas d'aplats de couleur vive.
  */
 const variants: Record<Variant, string> = {
-  primary: "bg-ink text-page hover:opacity-85",
-  outline: "border border-edge bg-transparent text-ink hover:border-axis hover:bg-ink/4",
-  ghost: "text-ink-2 hover:bg-ink/6 hover:text-ink",
-  danger: "text-neg hover:bg-neg/8",
+  primary: "bg-ink text-page hover:opacity-85 active:opacity-70",
+  outline:
+    "border border-edge bg-transparent text-ink hover:border-axis hover:bg-ink/4 active:bg-ink/8",
+  ghost: "text-ink-2 hover:bg-ink/6 hover:text-ink active:bg-ink/10",
+  danger: "text-neg hover:bg-neg/8 active:bg-neg/15",
 };
 
 const sizes: Record<Size, string> = {

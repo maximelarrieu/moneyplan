@@ -22,11 +22,11 @@ const frNumber = (label: string) =>
     .transform((s) => Number(s.replace(/\s/g, "").replace(",", ".")))
     .refine((n) => Number.isFinite(n), `${label} est invalide`);
 
-const positive = (label: string) =>
-  frNumber(label).refine((n) => n > 0, `${label} doit être positif`);
+const positive = (label: string, message: string) =>
+  frNumber(label).refine((n) => n > 0, message);
 
-const nonNegative = (label: string) =>
-  frNumber(label).refine((n) => n >= 0, `${label} doit être positif ou nul`);
+const nonNegative = (label: string, message: string) =>
+  frNumber(label).refine((n) => n >= 0, message);
 
 const dateSchema = z
   .string()
@@ -89,9 +89,18 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
 
     if (type === "BUY" || type === "SELL") {
       const instrumentId = resolveInstrumentId(form);
-      const quantity = positive("La quantité").parse(form.get("quantity"));
-      const unitPrice = positive("Le prix unitaire").parse(form.get("unitPrice"));
-      const fees = nonNegative("Les frais").parse(form.get("fees") || "0");
+      const quantity = positive(
+        "La quantité",
+        "La quantité doit être supérieure à zéro",
+      ).parse(form.get("quantity"));
+      const unitPrice = positive(
+        "Le prix unitaire",
+        "Le prix unitaire doit être supérieur à zéro",
+      ).parse(form.get("unitPrice"));
+      const fees = nonNegative(
+        "Les frais",
+        "Les frais doivent être positifs ou nuls",
+      ).parse(form.get("fees") || "0");
       values = {
         accountId: account.id,
         instrumentId,
@@ -105,7 +114,10 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
       };
     } else if (type === "DIVIDEND") {
       const instrumentId = resolveInstrumentId(form);
-      const amount = positive("Le montant").parse(form.get("amount"));
+      const amount = positive(
+        "Le montant",
+        "Le montant doit être supérieur à zéro",
+      ).parse(form.get("amount"));
       values = {
         accountId: account.id,
         instrumentId,
@@ -118,7 +130,10 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
         note,
       };
     } else {
-      const amount = positive("Le montant").parse(form.get("amount"));
+      const amount = positive(
+        "Le montant",
+        "Le montant doit être supérieur à zéro",
+      ).parse(form.get("amount"));
       values = {
         accountId: account.id,
         instrumentId: null,

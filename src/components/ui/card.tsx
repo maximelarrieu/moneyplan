@@ -19,7 +19,7 @@ export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHead
   return (
     <h2
       className={cn(
-        "text-[11px] font-medium uppercase tracking-[0.16em] text-muted",
+        "text-pretty text-[11px] font-medium uppercase tracking-[0.16em] text-muted",
         className,
       )}
       {...props}

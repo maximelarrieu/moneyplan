@@ -99,6 +99,12 @@ label {
   touch-action: manipulation;
 }
 
+/* Retour visuel de pression géré par nos états active: — pas de flash système. */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { refreshPrices } from "@/app/transactions/actions";
+import { RefreshButton } from "@/components/dashboard/refresh-button";
 import { AllocationDonut } from "@/components/dashboard/allocation-donut";
 import { DashboardHero } from "@/components/dashboard/hero";
 import { PositionsTable, type PositionRow } from "@/components/dashboard/positions-table";
 import { ValueChart } from "@/components/dashboard/value-chart";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import {
@@ -109,9 +109,7 @@ export default async function DashboardPage() {
           />
         </div>
         <form action={refreshPrices}>
-          <Button variant="ghost" size="sm" type="submit">
-            <RefreshCw className="size-3.5" aria-hidden="true" /> Actualiser les cours
-          </Button>
+          <RefreshButton />
         </form>
       </div>
 

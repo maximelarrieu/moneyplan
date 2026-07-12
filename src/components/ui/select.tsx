@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export function Select({
   className,
   ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+}: React.ComponentProps<"select">) {
   return (
     <select
       className={cn(

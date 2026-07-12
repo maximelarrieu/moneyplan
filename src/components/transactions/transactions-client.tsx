@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteTransaction } from "@/app/transactions/actions";
@@ -37,8 +38,19 @@ export function TransactionsClient({
 }) {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<TxRow | null>(null);
-  const [typeFilter, setTypeFilter] = React.useState("ALL");
-  const [instrumentFilter, setInstrumentFilter] = React.useState("ALL");
+
+  // Filtres reflétés dans l'URL (partage / retour arrière conservent l'état).
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const typeFilter = searchParams.get("type") ?? "ALL";
+  const instrumentFilter = searchParams.get("instrument") ?? "ALL";
+  const setFilter = (key: "type" | "instrument", value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value === "ALL") params.delete(key);
+    else params.set(key, value);
+    const qs = params.toString();
+    router.replace(qs ? `/transactions?${qs}` : "/transactions", { scroll: false });
+  };
 
   const filtered = txs.filter(
     (tx) =>
@@ -74,7 +86,7 @@ export function TransactionsClient({
           aria-label="Filtrer par type"
           className="w-40"
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
+          onChange={(e) => setFilter("type", e.target.value)}
         >
           <option value="ALL">Tous les types</option>
           {Object.entries(TX_TYPE_LABELS).map(([value, label]) => (
@@ -87,7 +99,7 @@ export function TransactionsClient({
           aria-label="Filtrer par instrument"
           className="w-56"
           value={instrumentFilter}
-          onChange={(e) => setInstrumentFilter(e.target.value)}
+          onChange={(e) => setFilter("instrument", e.target.value)}
         >
           <option value="ALL">Tous les instruments</option>
           {instruments.map((i) => (
@@ -121,7 +133,8 @@ export function TransactionsClient({
               {filtered.map((tx) => {
                 const amount = amountOf(tx);
                 return (
-                  <TR key={tx.id} className="hover:bg-ink/2">
+                  // content-visibility : la liste peut dépasser largement 50 lignes
+                  <TR key={tx.id} className="hover:bg-ink/2 [content-visibility:auto]">
                     <TD>{formatDate(tx.date)}</TD>
                     <TD>
                       <Badge>{TX_TYPE_LABELS[tx.type]}</Badge>

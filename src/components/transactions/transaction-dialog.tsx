@@ -28,20 +28,41 @@ export function TransactionDialog({
     editing?.instrumentId?.toString() ?? instruments[0]?.id.toString() ?? "new",
   );
   const [pending, startTransition] = React.useTransition();
+  const [error, setError] = React.useState<string | null>(null);
+  const dirtyRef = React.useRef(false);
+  const typeRef = React.useRef<HTMLSelectElement>(null);
+
+  // Focus du premier champ à l'ouverture — pointeur précis uniquement
+  // (sur mobile, éviter d'invoquer le clavier/menu d'entrée de jeu).
+  React.useEffect(() => {
+    if (window.matchMedia("(pointer: fine)").matches) typeRef.current?.focus();
+  }, []);
 
   const needsInstrument = type === "BUY" || type === "SELL" || type === "DIVIDEND";
   const isTrade = type === "BUY" || type === "SELL";
 
+  // Garde de fermeture : ne pas perdre une saisie en cours sans confirmation.
+  const requestClose = React.useCallback(() => {
+    if (
+      dirtyRef.current &&
+      !window.confirm("Abandonner la saisie en cours ?")
+    ) {
+      return;
+    }
+    onClose();
+  }, [onClose]);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    setError(null);
     startTransition(async () => {
       const result = await saveTransaction(form);
       if (result.ok) {
         toast.success(editing ? "Transaction modifiée" : "Transaction ajoutée");
         onClose();
       } else {
-        toast.error(result.error ?? "Erreur");
+        setError(result.error ?? "Une erreur est survenue — vérifiez la saisie.");
       }
     });
   }
@@ -49,10 +70,17 @@ export function TransactionDialog({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={requestClose}
       title={editing ? "Modifier la transaction" : "Nouvelle transaction"}
     >
-      <form onSubmit={onSubmit} autoComplete="off" className="space-y-4">
+      <form
+        onSubmit={onSubmit}
+        onChange={() => {
+          dirtyRef.current = true;
+        }}
+        autoComplete="off"
+        className="space-y-4"
+      >
         {editing && <input type="hidden" name="id" value={editing.id} />}
 
         <div className="grid grid-cols-2 gap-3">
@@ -61,6 +89,7 @@ export function TransactionDialog({
             <Select
               id="tx-type"
               name="type"
+              ref={typeRef}
               value={type}
               onChange={(e) => setType(e.target.value as TxRow["type"])}
             >
@@ -203,8 +232,14 @@ export function TransactionDialog({
           <Input id="tx-note" name="note" defaultValue={editing?.note ?? ""} />
         </div>
 
+        {error && (
+          <p role="alert" className="border border-neg/40 px-3 py-2 text-sm text-neg">
+            {error}
+          </p>
+        )}
+
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={requestClose}>
             Annuler
           </Button>
           <Button type="submit" variant="primary" disabled={pending}>

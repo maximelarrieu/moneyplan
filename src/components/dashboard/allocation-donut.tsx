@@ -27,6 +27,20 @@ const pctFmt = new Intl.NumberFormat("fr-FR", {
 
 export function AllocationDonut({ slices }: { slices: AllocationSlice[] }) {
   const reducedMotion = useReducedMotion();
+  if (slices.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Répartition</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="py-8 text-center text-sm text-muted">
+            Rien à répartir pour l’instant — ajoutez un achat ou un versement.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   return (
     <Card>
       <CardHeader>
@@ -76,7 +90,7 @@ export function AllocationDonut({ slices }: { slices: AllocationSlice[] }) {
                 style={{ background: colorFor(slice, i) }}
                 aria-hidden
               />
-              <span className="truncate text-ink-2">{slice.label}</span>
+              <span className="min-w-0 truncate text-ink-2">{slice.label}</span>
               <span className="ml-auto pl-2 font-medium tabular-nums">
                 {pctFmt.format(slice.pct)}
               </span>

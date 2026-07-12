@@ -65,7 +65,7 @@ export default async function PositionPage({
           <ArrowLeft className="size-3.5" aria-hidden="true" /> Tableau de bord
         </Link>
         <div className="flex flex-wrap items-baseline gap-2">
-          <h1 className="font-serif text-3xl tracking-tight">{instrument.name}</h1>
+          <h1 className="text-pretty font-serif text-3xl tracking-tight">{instrument.name}</h1>
           <Badge translate="no">{instrument.symbol}</Badge>
           <Badge>{INSTRUMENT_TYPE_LABELS[instrument.type] ?? instrument.type}</Badge>
           {instrument.isin && <Badge>{instrument.isin}</Badge>}

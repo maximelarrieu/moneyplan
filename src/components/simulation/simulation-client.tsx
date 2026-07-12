@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,10 +35,12 @@ function NumberField({
       </Label>
       <Input
         id={id}
+        name={id}
         type="number"
         inputMode="decimal"
         min={min}
         step={step}
+        autoComplete="off"
         value={Number.isFinite(value) ? value : ""}
         onChange={(e) => onChange(Number(e.target.value))}
       />
@@ -52,11 +55,44 @@ export function SimulationClient({
   defaultInitial: number;
   defaultMonthly: number;
 }) {
-  const [initial, setInitial] = React.useState(defaultInitial);
-  const [monthlyA, setMonthlyA] = React.useState(defaultMonthly);
-  const [monthlyB, setMonthlyB] = React.useState(defaultMonthly + 200);
-  const [returnPct, setReturnPct] = React.useState(7);
-  const [years, setYears] = React.useState(20);
+  // Scénario initialisé depuis l'URL (partage possible), puis resynchronisé
+  // vers l'URL après modification.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromUrl = (key: string, fallback: number) => {
+    const raw = searchParams.get(key);
+    if (raw == null) return fallback;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const [initial, setInitial] = React.useState(() => fromUrl("capital", defaultInitial));
+  const [monthlyA, setMonthlyA] = React.useState(() => fromUrl("a", defaultMonthly));
+  const [monthlyB, setMonthlyB] = React.useState(() =>
+    fromUrl("b", defaultMonthly + 200),
+  );
+  const [returnPct, setReturnPct] = React.useState(() => fromUrl("rendement", 7));
+  const [years, setYears] = React.useState(() => fromUrl("horizon", 20));
+
+  const touchedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!touchedRef.current) return; // ne pas réécrire l'URL au premier rendu
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams({
+        capital: String(initial),
+        a: String(monthlyA),
+        b: String(monthlyB),
+        rendement: String(returnPct),
+        horizon: String(years),
+      });
+      router.replace(`/simulation?${params}`, { scroll: false });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [initial, monthlyA, monthlyB, returnPct, years, router]);
+  const touch = <T,>(setter: (v: T) => void) => (v: T) => {
+    touchedRef.current = true;
+    setter(v);
+  };
 
   const { rows, milestones } = React.useMemo(() => {
     const safeYears = Math.min(Math.max(years || 1, 1), 50);
@@ -92,7 +128,7 @@ export function SimulationClient({
             label="Capital de départ"
             suffix="€"
             value={initial}
-            onChange={setInitial}
+            onChange={touch(setInitial)}
             step={100}
           />
           <NumberField
@@ -100,21 +136,21 @@ export function SimulationClient({
             label="DCA actuel — A"
             suffix="€/mois"
             value={monthlyA}
-            onChange={setMonthlyA}
+            onChange={touch(setMonthlyA)}
           />
           <NumberField
             id="sim-monthly-b"
             label="DCA augmenté — B"
             suffix="€/mois"
             value={monthlyB}
-            onChange={setMonthlyB}
+            onChange={touch(setMonthlyB)}
           />
           <NumberField
             id="sim-return"
             label="Rendement annuel"
             suffix="%"
             value={returnPct}
-            onChange={setReturnPct}
+            onChange={touch(setReturnPct)}
             step={0.5}
           />
           <NumberField
@@ -122,7 +158,7 @@ export function SimulationClient({
             label="Horizon"
             suffix="ans"
             value={years}
-            onChange={setYears}
+            onChange={touch(setYears)}
             min={1}
             step={1}
           />

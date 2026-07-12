@@ -41,9 +41,15 @@ export function formatQty(value: number): string {
   return qty.format(value);
 }
 
+const dateFmt = new Intl.DateTimeFormat("fr-FR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 export function formatDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split("-");
-  return `${d}/${m}/${y}`;
+  return dateFmt.format(new Date(isoDate + "T00:00:00Z"));
 }
 
 /** Format court pour les axes de graphes : « 9,4 k€ », « 1,2 M€ ». */

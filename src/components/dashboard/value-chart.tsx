@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Area,
   CartesianGrid,
@@ -33,7 +34,21 @@ function monthTick(date: string): string {
 }
 
 export function ValueChart({ data }: { data: ValuePoint[] }) {
-  const [period, setPeriod] = React.useState<PeriodKey>("MAX");
+  // Période reflétée dans l'URL : la vue choisie est partageable.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const raw = searchParams.get("periode");
+  const period: PeriodKey = PERIODS.some((p) => p.key === raw)
+    ? (raw as PeriodKey)
+    : "MAX";
+  const setPeriod = (next: PeriodKey) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "MAX") params.delete("periode");
+    else params.set("periode", next);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
   const reducedMotion = useReducedMotion();
 
   const filtered = React.useMemo(() => {
