@@ -17,6 +17,7 @@ import { formatCompactEUR, formatDate, formatEUR, formatSignedEUR } from "@/lib/
 import type { ValuePoint } from "@/lib/portfolio";
 import { downsample } from "@/lib/portfolio";
 import { TooltipFrame, axisStyle } from "@/components/charts/chart-tooltip";
+import { useReducedMotion } from "@/components/charts/use-reduced-motion";
 
 const PERIODS = [
   { key: "1A", months: 12 },
@@ -33,6 +34,7 @@ function monthTick(date: string): string {
 
 export function ValueChart({ data }: { data: ValuePoint[] }) {
   const [period, setPeriod] = React.useState<PeriodKey>("MAX");
+  const reducedMotion = useReducedMotion();
 
   const filtered = React.useMemo(() => {
     const months = PERIODS.find((p) => p.key === period)?.months;
@@ -50,12 +52,13 @@ export function ValueChart({ data }: { data: ValuePoint[] }) {
     <Card>
       <CardHeader className="flex items-center justify-between">
         <CardTitle>Valeur du portefeuille vs versements</CardTitle>
-        <div className="flex gap-1">
+        <div className="flex gap-1" role="group" aria-label="Période affichée">
           {PERIODS.map((p) => (
             <Button
               key={p.key}
               size="sm"
               variant={period === p.key ? "outline" : "ghost"}
+              aria-pressed={period === p.key}
               onClick={() => setPeriod(p.key)}
             >
               {p.key === "MAX" ? "Max" : p.key}
@@ -122,6 +125,7 @@ export function ValueChart({ data }: { data: ValuePoint[] }) {
                 fill="url(#valueFill)"
                 dot={false}
                 activeDot={{ r: 4 }}
+                isAnimationActive={!reducedMotion}
               />
               <Line
                 type="monotone"
@@ -132,6 +136,7 @@ export function ValueChart({ data }: { data: ValuePoint[] }) {
                 strokeDasharray="5 4"
                 dot={false}
                 activeDot={{ r: 4 }}
+                isAnimationActive={!reducedMotion}
               />
             </ComposedChart>
           </ResponsiveContainer>

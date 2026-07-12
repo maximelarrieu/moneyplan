@@ -57,14 +57,15 @@ export function TransactionsClient({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Transactions</h1>
+        <h1 className="font-serif text-3xl tracking-tight">Transactions</h1>
         <Button
+          variant="primary"
           onClick={() => {
             setEditing(null);
             setDialogOpen(true);
           }}
         >
-          <Plus className="size-4" /> Ajouter
+          <Plus className="size-4" aria-hidden="true" /> Ajouter
         </Button>
       </div>
 
@@ -162,7 +163,7 @@ export function TransactionsClient({
                             setDialogOpen(true);
                           }}
                         >
-                          <Pencil className="size-3.5" />
+                          <Pencil className="size-3.5" aria-hidden="true" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -170,7 +171,7 @@ export function TransactionsClient({
                           aria-label="Supprimer"
                           onClick={() => onDelete(tx)}
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-3.5" aria-hidden="true" />
                         </Button>
                       </div>
                     </TD>

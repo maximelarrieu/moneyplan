@@ -1,14 +1,18 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "default" | "outline" | "ghost" | "destructive";
+type Variant = "primary" | "outline" | "ghost" | "danger";
 type Size = "default" | "sm" | "icon";
 
+/*
+ * Boutons volontairement discrets : un seul bouton « primary » (encre pleine)
+ * par écran, tout le reste en hairline ou fantôme. Pas d'aplats de couleur vive.
+ */
 const variants: Record<Variant, string> = {
-  default: "bg-accent text-white hover:bg-accent/90",
-  outline: "border border-edge bg-surface text-ink hover:bg-ink/5",
-  ghost: "text-ink-2 hover:bg-ink/5 hover:text-ink",
-  destructive: "bg-neg text-white hover:bg-neg/90",
+  primary: "bg-ink text-page hover:opacity-85",
+  outline: "border border-edge bg-transparent text-ink hover:border-axis hover:bg-ink/4",
+  ghost: "text-ink-2 hover:bg-ink/6 hover:text-ink",
+  danger: "text-neg hover:bg-neg/8",
 };
 
 const sizes: Record<Size, string> = {
@@ -25,7 +29,7 @@ export interface ButtonProps
 
 export function Button({
   className,
-  variant = "default",
+  variant = "outline",
   size = "default",
   type = "button",
   ...props
@@ -34,7 +38,7 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-none font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
         variants[variant],
         sizes[size],
         className,

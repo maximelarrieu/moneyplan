@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCompactEUR, formatEUR } from "@/lib/format";
 import { TooltipFrame, axisStyle } from "@/components/charts/chart-tooltip";
+import { useReducedMotion } from "@/components/charts/use-reduced-motion";
 
 export interface ProjectionRow {
   month: number;
@@ -22,6 +23,7 @@ export interface ProjectionRow {
 }
 
 export function ProjectionChart({ rows }: { rows: ProjectionRow[] }) {
+  const reducedMotion = useReducedMotion();
   return (
     <Card>
       <CardHeader>
@@ -78,6 +80,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionRow[] }) {
                 stroke="var(--chart-1)"
                 strokeWidth={2}
                 dot={false}
+                isAnimationActive={!reducedMotion}
               />
               <Line
                 type="monotone"
@@ -86,6 +89,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionRow[] }) {
                 stroke="var(--chart-2)"
                 strokeWidth={2}
                 dot={false}
+                isAnimationActive={!reducedMotion}
               />
               <Line
                 type="monotone"
@@ -96,6 +100,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionRow[] }) {
                 strokeDasharray="5 4"
                 strokeOpacity={0.55}
                 dot={false}
+                isAnimationActive={!reducedMotion}
               />
               <Line
                 type="monotone"
@@ -106,6 +111,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionRow[] }) {
                 strokeDasharray="5 4"
                 strokeOpacity={0.55}
                 dot={false}
+                isAnimationActive={!reducedMotion}
               />
             </LineChart>
           </ResponsiveContainer>

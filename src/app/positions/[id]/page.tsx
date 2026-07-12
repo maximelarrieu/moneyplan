@@ -62,11 +62,11 @@ export default async function PositionPage({
           href="/"
           className="mb-2 inline-flex items-center gap-1 text-xs text-muted hover:text-ink"
         >
-          <ArrowLeft className="size-3.5" /> Tableau de bord
+          <ArrowLeft className="size-3.5" aria-hidden="true" /> Tableau de bord
         </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold">{instrument.name}</h1>
-          <Badge>{instrument.symbol}</Badge>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h1 className="font-serif text-3xl tracking-tight">{instrument.name}</h1>
+          <Badge translate="no">{instrument.symbol}</Badge>
           <Badge>{INSTRUMENT_TYPE_LABELS[instrument.type] ?? instrument.type}</Badge>
           {instrument.isin && <Badge>{instrument.isin}</Badge>}
         </div>
@@ -95,7 +95,7 @@ export default async function PositionPage({
             <CardContent>
               {position.unrealizedPnL != null ? (
                 <>
-                  <p className={cn("text-xl font-semibold tracking-tight", pnlClass)}>
+                  <p className={cn("font-serif text-2xl tracking-tight tabular-nums", pnlClass)}>
                     {formatSignedEUR(position.unrealizedPnL)}
                   </p>
                   {position.unrealizedPct != null && (
@@ -105,7 +105,7 @@ export default async function PositionPage({
                   )}
                 </>
               ) : (
-                <p className="text-xl font-semibold">—</p>
+                <p className="font-serif text-2xl">—</p>
               )}
             </CardContent>
           </Card>
@@ -167,7 +167,7 @@ function Stat({ title, value }: { title: string; value: string }) {
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-xl font-semibold tracking-tight">{value}</p>
+        <p className="font-serif text-2xl tracking-tight tabular-nums">{value}</p>
       </CardContent>
     </Card>
   );

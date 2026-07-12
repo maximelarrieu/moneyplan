@@ -1,3 +1,4 @@
+// Page de projection : les entrées viennent du portefeuille réel.
 import { SimulationClient } from "@/components/simulation/simulation-client";
 import { computeCashBalance, computePositions } from "@/lib/portfolio";
 import { getLatestPrices } from "@/lib/prices";

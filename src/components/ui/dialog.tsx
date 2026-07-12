@@ -33,7 +33,7 @@ export function Dialog({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 md:items-center"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 p-4 md:items-center"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -43,19 +43,19 @@ export function Dialog({
     >
       <div
         className={cn(
-          "my-8 w-full max-w-lg rounded-xl border border-edge bg-surface p-5 shadow-xl",
+          "my-8 w-full max-w-lg border border-edge bg-surface p-5 shadow-xl",
           className,
         )}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">{title}</h2>
+        <div className="mb-4 flex items-center justify-between border-b border-edge pb-3">
+          <h2 className="font-serif text-lg text-ink">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-md p-1 text-muted hover:bg-ink/5 hover:text-ink"
+            className="cursor-pointer p-1 text-muted transition-colors duration-150 hover:bg-ink/6 hover:text-ink"
             aria-label="Fermer"
           >
-            <X className="size-4" />
+            <X className="size-4" aria-hidden="true" />
           </button>
         </div>
         {children}

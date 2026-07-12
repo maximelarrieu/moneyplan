@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatEUR } from "@/lib/format";
 import type { AllocationSlice } from "@/lib/portfolio";
 import { TooltipFrame } from "@/components/charts/chart-tooltip";
+import { useReducedMotion } from "@/components/charts/use-reduced-motion";
 
 const COLORS = [
   "var(--chart-1)",
@@ -25,6 +26,7 @@ const pctFmt = new Intl.NumberFormat("fr-FR", {
 });
 
 export function AllocationDonut({ slices }: { slices: AllocationSlice[] }) {
+  const reducedMotion = useReducedMotion();
   return (
     <Card>
       <CardHeader>
@@ -42,6 +44,7 @@ export function AllocationDonut({ slices }: { slices: AllocationSlice[] }) {
                 outerRadius={88}
                 paddingAngle={2}
                 strokeWidth={0}
+                isAnimationActive={!reducedMotion}
               >
                 {slices.map((slice, i) => (
                   <Cell key={slice.label} fill={colorFor(slice, i)} />

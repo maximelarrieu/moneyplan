@@ -77,7 +77,7 @@ export function SimulationClient({
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold">Simulation DCA</h1>
+      <h1 className="font-serif text-3xl tracking-tight">Simulation DCA</h1>
       <p className="max-w-2xl text-sm text-ink-2">
         Comparez votre rythme d’investissement actuel (scénario A) à un rythme
         augmenté (scénario B), à rendement annualisé constant. Projection

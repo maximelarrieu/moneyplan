@@ -2,8 +2,8 @@ import Link from "next/link";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { refreshPrices } from "@/app/transactions/actions";
 import { AllocationDonut } from "@/components/dashboard/allocation-donut";
+import { DashboardHero } from "@/components/dashboard/hero";
 import { PositionsTable, type PositionRow } from "@/components/dashboard/positions-table";
-import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { ValueChart } from "@/components/dashboard/value-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,13 +36,16 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-lg pt-16">
         <Card>
           <CardContent className="space-y-3 py-10 text-center">
-            <h1 className="text-lg font-semibold">Bienvenue sur MoneyPlan</h1>
+            <h1 className="font-serif text-2xl">Bienvenue sur MoneyPlan</h1>
             <p className="text-sm text-ink-2">
               Commencez par enregistrer votre premier versement et votre premier
               achat pour voir votre portefeuille prendre forme.
             </p>
-            <Link href="/transactions" className="inline-block">
-              <Button>Ajouter une transaction</Button>
+            <Link
+              href="/transactions"
+              className="inline-flex h-9 items-center bg-ink px-4 text-sm font-medium text-page transition-opacity duration-150 hover:opacity-85"
+            >
+              Ajouter une transaction
             </Link>
           </CardContent>
         </Card>
@@ -69,6 +72,10 @@ export default async function DashboardPage() {
 
   const series = computeValueSeries(txs, getPriceHistories(ids), todayISO());
   const allocation = computeAllocation(positions, cash, names);
+  const lastPriceDate = [...latestPrices.values()].reduce<string | null>(
+    (latest, p) => (latest == null || p.date > latest ? p.date : latest),
+    null,
+  );
 
   const rows: PositionRow[] = held
     .sort((a, b) => b.marketValue - a.marketValue)
@@ -86,43 +93,49 @@ export default async function DashboardPage() {
     }));
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Tableau de bord</h1>
+    <div className="space-y-8">
+      <h1 className="sr-only">Tableau de bord</h1>
+
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <DashboardHero
+            totalValue={totalValue}
+            invested={invested}
+            unrealizedPnL={totalUnrealized}
+            unrealizedPct={totalCostBasis > 0 ? totalUnrealized / totalCostBasis : null}
+            cash={cash}
+            dividends={totalDividends}
+            lastPriceDate={lastPriceDate}
+          />
+        </div>
         <form action={refreshPrices}>
-          <Button variant="outline" size="sm" type="submit">
-            <RefreshCw className="size-3.5" /> Actualiser les cours
+          <Button variant="ghost" size="sm" type="submit">
+            <RefreshCw className="size-3.5" aria-hidden="true" /> Actualiser les cours
           </Button>
         </form>
       </div>
 
       {health.hasError && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-edge bg-surface px-4 py-3 text-sm text-ink-2">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--chart-3)]" aria-hidden />
-          <div>
+        <div className="flex items-start gap-2.5 border border-edge bg-surface px-4 py-3 text-sm text-ink-2">
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-[var(--chart-3)]"
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
             <p className="font-medium text-ink">
               Cours non actualisés
               {health.lastPriceDate
                 ? ` (dernier cours : ${formatDate(health.lastPriceDate)})`
                 : ""}
             </p>
-            <p className="text-xs">
+            <p className="break-words text-xs">
               {health.errors.map((e) => `${e.symbol} : ${e.error}`).join(" · ")}
             </p>
           </div>
         </div>
       )}
 
-      <SummaryCards
-        totalValue={totalValue}
-        invested={invested}
-        unrealizedPnL={totalUnrealized}
-        unrealizedPct={totalCostBasis > 0 ? totalUnrealized / totalCostBasis : null}
-        cash={cash}
-        dividends={totalDividends}
-      />
-
-      <div className="grid gap-5 xl:grid-cols-[2fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
         <ValueChart data={series} />
         <AllocationDonut slices={allocation} />
       </div>

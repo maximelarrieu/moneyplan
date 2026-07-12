@@ -8,7 +8,8 @@ export function Select({
   return (
     <select
       className={cn(
-        "h-9 w-full cursor-pointer rounded-lg border border-edge bg-surface px-3 text-sm text-ink focus:outline-2 focus:outline-accent/60 disabled:opacity-50",
+        // bg/texte explicites : nécessaires pour le <select> natif en dark mode
+        "h-9 w-full cursor-pointer rounded-none border border-edge bg-surface px-3 text-sm text-ink transition-colors duration-150 hover:border-axis disabled:opacity-50",
         className,
       )}
       {...props}

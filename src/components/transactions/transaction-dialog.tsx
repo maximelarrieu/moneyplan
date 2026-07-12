@@ -52,7 +52,7 @@ export function TransactionDialog({
       onClose={onClose}
       title={editing ? "Modifier la transaction" : "Nouvelle transaction"}
     >
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} autoComplete="off" className="space-y-4">
         {editing && <input type="hidden" name="id" value={editing.id} />}
 
         <div className="grid grid-cols-2 gap-3">
@@ -107,7 +107,13 @@ export function TransactionDialog({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="new-symbol">Ticker Yahoo</Label>
-                <Input id="new-symbol" name="newSymbol" placeholder="WPEA.PA" required />
+                <Input
+                  id="new-symbol"
+                  name="newSymbol"
+                  placeholder="WPEA.PA"
+                  spellCheck={false}
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="new-type">Catégorie</Label>
@@ -129,7 +135,7 @@ export function TransactionDialog({
             </div>
             <div>
               <Label htmlFor="new-isin">ISIN (optionnel)</Label>
-              <Input id="new-isin" name="newIsin" placeholder="IE0002XZSHO1" />
+              <Input id="new-isin" name="newIsin" placeholder="IE0002XZSHO1" spellCheck={false} />
             </div>
           </div>
         )}
@@ -198,10 +204,10 @@ export function TransactionDialog({
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" variant="primary" disabled={pending}>
             {pending ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </div>

@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatPrice } from "@/lib/format";
 import { downsample } from "@/lib/portfolio";
 import { TooltipFrame, axisStyle } from "@/components/charts/chart-tooltip";
+import { useReducedMotion } from "@/components/charts/use-reduced-motion";
 
 export interface PricePointWithBuy {
   date: string;
@@ -34,6 +35,7 @@ export function PriceChart({
   data: PricePointWithBuy[];
   pru: number | null;
 }) {
+  const reducedMotion = useReducedMotion();
   if (data.length === 0) {
     return (
       <Card>
@@ -114,6 +116,7 @@ export function PriceChart({
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
+                isAnimationActive={!reducedMotion}
               />
               <Scatter
                 dataKey="buy"
@@ -122,6 +125,7 @@ export function PriceChart({
                 stroke="var(--surface)"
                 strokeWidth={2}
                 shape="circle"
+                isAnimationActive={!reducedMotion}
               />
             </ComposedChart>
           </ResponsiveContainer>

@@ -1,49 +1,59 @@
 @import "tailwindcss";
 
-/* Tokens (palette data-viz validée — clair et sombre sélectionnés, pas inversés) */
+/*
+ * Direction « carnet d'investisseur » : papier chaud, encre, hairlines,
+ * titres serif. Palette de graphes validée (contraste + daltonisme) sur
+ * chacune des deux surfaces — le sombre est choisi, pas inversé.
+ */
 :root {
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
+  color-scheme: light;
 
-  --chart-1: #2a78d6;
-  --chart-2: #1baf7a;
-  --chart-3: #eda100;
-  --chart-4: #008300;
-  --chart-5: #4a3aa7;
-  --chart-6: #e34948;
-  --chart-cash: #898781;
+  --page: #f6f3ec;
+  --surface: #fdfcf9;
+  --ink: #1c1b17;
+  --ink-2: #5b564b;
+  --muted: #8b8578;
+  --grid: #e9e4d8;
+  --axis: #d5cfc0;
+  --border: rgba(28, 27, 23, 0.13);
 
-  --pos: #006300;
-  --neg: #d03b3b;
+  --chart-1: #16713c;
+  --chart-2: #2a78d6;
+  --chart-3: #b87a10;
+  --chart-4: #7048a8;
+  --chart-5: #c24a33;
+  --chart-6: #c2588e;
+  --chart-cash: #8b8578;
+
+  --accent: #16713c;
+  --pos: #156233;
+  --neg: #b03a24;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.1);
+    color-scheme: dark;
 
-    --chart-1: #3987e5;
-    --chart-2: #199e70;
+    --page: #121110;
+    --surface: #1c1a16;
+    --ink: #f2eee5;
+    --ink-2: #c6bfb0;
+    --muted: #8b8578;
+    --grid: #2e2b25;
+    --axis: #3b372f;
+    --border: rgba(242, 238, 229, 0.14);
+
+    --chart-1: #4ca97a;
+    --chart-2: #3987e5;
     --chart-3: #c98500;
-    --chart-4: #008300;
-    --chart-5: #9085e9;
-    --chart-6: #e66767;
-    --chart-cash: #898781;
+    --chart-4: #8f73e3;
+    --chart-5: #dd6247;
+    --chart-6: #d0699b;
+    --chart-cash: #8b8578;
 
-    --pos: #0ca30c;
-    --neg: #e66767;
+    --accent: #4ca97a;
+    --pos: #4ca97a;
+    --neg: #e0704f;
   }
 }
 
@@ -58,12 +68,43 @@
   --color-edge: var(--border);
   --color-pos: var(--pos);
   --color-neg: var(--neg);
-  --color-accent: var(--chart-1);
+  --color-accent: var(--accent);
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+    "Times New Roman", serif;
 }
 
 body {
   background: var(--page);
   color: var(--ink);
   font-family: var(--font-sans);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+/* Focus clavier uniforme, jamais supprimé sans remplacement. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+button,
+a,
+input,
+select,
+label {
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

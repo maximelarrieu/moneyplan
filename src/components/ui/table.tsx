@@ -10,7 +10,15 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
 }
 
 export function THead({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("text-left text-xs text-muted", className)} {...props} />;
+  return (
+    <thead
+      className={cn(
+        "border-b border-edge text-left text-[11px] uppercase tracking-[0.1em] text-muted",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
