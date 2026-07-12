@@ -1,0 +1,182 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "@/db";
+import { instruments, transactions, INSTRUMENT_TYPES, TX_TYPES } from "@/db/schema";
+import { getOrCreateDefaultAccount } from "@/lib/queries";
+import { syncPrices } from "@/lib/prices";
+
+export interface ActionResult {
+  ok: boolean;
+  error?: string;
+}
+
+/** Nombre saisi à la française : accepte la virgule décimale. */
+const frNumber = (label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${label} est requis`)
+    .transform((s) => Number(s.replace(/\s/g, "").replace(",", ".")))
+    .refine((n) => Number.isFinite(n), `${label} est invalide`);
+
+const positive = (label: string) =>
+  frNumber(label).refine((n) => n > 0, `${label} doit être positif`);
+
+const nonNegative = (label: string) =>
+  frNumber(label).refine((n) => n >= 0, `${label} doit être positif ou nul`);
+
+const dateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide");
+
+const newInstrumentSchema = z.object({
+  symbol: z
+    .string()
+    .trim()
+    .min(1, "Le ticker est requis")
+    .transform((s) => s.toUpperCase()),
+  name: z.string().trim().min(1, "Le nom est requis"),
+  isin: z.string().trim().optional(),
+  type: z.enum(INSTRUMENT_TYPES),
+});
+
+function resolveInstrumentId(form: FormData): number {
+  const raw = String(form.get("instrumentId") ?? "");
+  if (raw !== "new") {
+    const id = Number(raw);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new Error("Choisissez un instrument");
+    }
+    return id;
+  }
+  const parsed = newInstrumentSchema.parse({
+    symbol: form.get("newSymbol"),
+    name: form.get("newName"),
+    isin: form.get("newIsin") || undefined,
+    type: form.get("newType") || "ETF",
+  });
+  const existing = db
+    .select()
+    .from(instruments)
+    .where(eq(instruments.symbol, parsed.symbol))
+    .get();
+  if (existing) return existing.id;
+  return db
+    .insert(instruments)
+    .values({
+      symbol: parsed.symbol,
+      name: parsed.name,
+      isin: parsed.isin ?? null,
+      type: parsed.type,
+    })
+    .returning()
+    .get().id;
+}
+
+export async function saveTransaction(form: FormData): Promise<ActionResult> {
+  try {
+    const account = getOrCreateDefaultAccount();
+    const type = z.enum(TX_TYPES).parse(form.get("type"));
+    const date = dateSchema.parse(form.get("date"));
+    const note = String(form.get("note") ?? "").trim() || null;
+    const idRaw = String(form.get("id") ?? "");
+    const id = idRaw ? Number(idRaw) : null;
+
+    let values: typeof transactions.$inferInsert;
+
+    if (type === "BUY" || type === "SELL") {
+      const instrumentId = resolveInstrumentId(form);
+      const quantity = positive("La quantité").parse(form.get("quantity"));
+      const unitPrice = positive("Le prix unitaire").parse(form.get("unitPrice"));
+      const fees = nonNegative("Les frais").parse(form.get("fees") || "0");
+      values = {
+        accountId: account.id,
+        instrumentId,
+        type,
+        date,
+        quantity,
+        unitPrice,
+        fees,
+        amount: null,
+        note,
+      };
+    } else if (type === "DIVIDEND") {
+      const instrumentId = resolveInstrumentId(form);
+      const amount = positive("Le montant").parse(form.get("amount"));
+      values = {
+        accountId: account.id,
+        instrumentId,
+        type,
+        date,
+        quantity: null,
+        unitPrice: null,
+        fees: 0,
+        amount,
+        note,
+      };
+    } else {
+      const amount = positive("Le montant").parse(form.get("amount"));
+      values = {
+        accountId: account.id,
+        instrumentId: null,
+        type,
+        date,
+        quantity: null,
+        unitPrice: null,
+        fees: 0,
+        amount,
+        note,
+      };
+    }
+
+    if (id) {
+      db.update(transactions).set(values).where(eq(transactions.id, id)).run();
+    } else {
+      db.insert(transactions).values(values).run();
+      // Flux DCA typique : le versement qui finance l'achat, créé d'un coup.
+      if (type === "BUY" && form.get("withDeposit") === "on") {
+        const total =
+          (values.quantity ?? 0) * (values.unitPrice ?? 0) + (values.fees ?? 0);
+        db.insert(transactions)
+          .values({
+            accountId: account.id,
+            instrumentId: null,
+            type: "DEPOSIT",
+            date,
+            quantity: null,
+            unitPrice: null,
+            fees: 0,
+            amount: Math.round(total * 100) / 100,
+            note: "Versement lié à l’achat",
+          })
+          .run();
+      }
+    }
+
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return { ok: false, error: err.issues[0]?.message ?? "Saisie invalide" };
+    }
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
+  }
+}
+
+export async function deleteTransaction(id: number): Promise<ActionResult> {
+  try {
+    db.delete(transactions).where(eq(transactions.id, id)).run();
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
+  }
+}
+
+export async function refreshPrices(): Promise<void> {
+  await syncPrices({ force: true });
+  revalidatePath("/", "layout");
+}

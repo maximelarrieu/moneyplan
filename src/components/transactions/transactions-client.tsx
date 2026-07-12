@@ -1,0 +1,196 @@
+"use client";
+
+import * as React from "react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { deleteTransaction } from "@/app/transactions/actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { formatDate, formatEUR, formatPrice, formatQty } from "@/lib/format";
+import { TransactionDialog } from "./transaction-dialog";
+import { TX_TYPE_LABELS, type InstrumentOption, type TxRow } from "./types";
+
+function amountOf(tx: TxRow): number {
+  switch (tx.type) {
+    case "BUY":
+      return -((tx.quantity ?? 0) * (tx.unitPrice ?? 0) + tx.fees);
+    case "SELL":
+      return (tx.quantity ?? 0) * (tx.unitPrice ?? 0) - tx.fees;
+    case "DEPOSIT":
+    case "DIVIDEND":
+      return tx.amount ?? 0;
+    case "WITHDRAWAL":
+    case "FEE":
+      return -(tx.amount ?? 0);
+  }
+}
+
+export function TransactionsClient({
+  txs,
+  instruments,
+}: {
+  txs: TxRow[];
+  instruments: InstrumentOption[];
+}) {
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<TxRow | null>(null);
+  const [typeFilter, setTypeFilter] = React.useState("ALL");
+  const [instrumentFilter, setInstrumentFilter] = React.useState("ALL");
+
+  const filtered = txs.filter(
+    (tx) =>
+      (typeFilter === "ALL" || tx.type === typeFilter) &&
+      (instrumentFilter === "ALL" || tx.instrumentId?.toString() === instrumentFilter),
+  );
+
+  async function onDelete(tx: TxRow) {
+    const label = TX_TYPE_LABELS[tx.type];
+    if (!window.confirm(`Supprimer « ${label} du ${formatDate(tx.date)} » ?`)) return;
+    const result = await deleteTransaction(tx.id);
+    if (result.ok) toast.success("Transaction supprimée");
+    else toast.error(result.error ?? "Erreur");
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">Transactions</h1>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setDialogOpen(true);
+          }}
+        >
+          <Plus className="size-4" /> Ajouter
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Select
+          aria-label="Filtrer par type"
+          className="w-40"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <option value="ALL">Tous les types</option>
+          {Object.entries(TX_TYPE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          aria-label="Filtrer par instrument"
+          className="w-56"
+          value={instrumentFilter}
+          onChange={(e) => setInstrumentFilter(e.target.value)}
+        >
+          <option value="ALL">Tous les instruments</option>
+          {instruments.map((i) => (
+            <option key={i.id} value={i.id}>
+              {i.symbol} — {i.name}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <Card>
+        {filtered.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-muted">
+            Aucune transaction — ajoutez votre premier achat.
+          </p>
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Date</TH>
+                <TH>Type</TH>
+                <TH>Instrument</TH>
+                <TH className="text-right">Quantité</TH>
+                <TH className="text-right">Prix unitaire</TH>
+                <TH className="text-right">Frais</TH>
+                <TH className="text-right">Mouvement</TH>
+                <TH className="w-20" />
+              </TR>
+            </THead>
+            <TBody>
+              {filtered.map((tx) => {
+                const amount = amountOf(tx);
+                return (
+                  <TR key={tx.id} className="hover:bg-ink/2">
+                    <TD>{formatDate(tx.date)}</TD>
+                    <TD>
+                      <Badge>{TX_TYPE_LABELS[tx.type]}</Badge>
+                    </TD>
+                    <TD className="max-w-52 truncate">
+                      {tx.instrumentSymbol ? (
+                        <span title={tx.instrumentName ?? undefined}>
+                          {tx.instrumentSymbol}
+                        </span>
+                      ) : (
+                        <span className="text-muted">{tx.note ?? "—"}</span>
+                      )}
+                    </TD>
+                    <TD className="text-right">
+                      {tx.quantity != null ? formatQty(tx.quantity) : "—"}
+                    </TD>
+                    <TD className="text-right">
+                      {tx.unitPrice != null ? formatPrice(tx.unitPrice) : "—"}
+                    </TD>
+                    <TD className="text-right">
+                      {tx.fees ? formatEUR(tx.fees) : "—"}
+                    </TD>
+                    <TD
+                      className={
+                        "text-right font-medium " +
+                        (amount >= 0 ? "text-pos" : "text-ink")
+                      }
+                    >
+                      {formatEUR(amount)}
+                    </TD>
+                    <TD>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Modifier"
+                          onClick={() => {
+                            setEditing(tx);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Supprimer"
+                          onClick={() => onDelete(tx)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </TD>
+                  </TR>
+                );
+              })}
+            </TBody>
+          </Table>
+        )}
+      </Card>
+
+      {dialogOpen && (
+        <TransactionDialog
+          key={editing?.id ?? "new"}
+          open
+          onClose={() => setDialogOpen(false)}
+          instruments={instruments}
+          editing={editing}
+        />
+      )}
+    </div>
+  );
+}
