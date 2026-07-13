@@ -27,7 +27,7 @@ export const TX_TYPES = [
   "DEPOSIT",
   "WITHDRAWAL",
   "FEE",
-  "REFUND", // crédit de liquidités hors versement (ex. frais trop perçus)
+  "REFUND", // remboursement de frais : crédit de liquidités hors versement (ex. frais trop perçus)
   "RETURN_OF_CAPITAL", // remboursement d'apport : réduit le PRU, pas un revenu
 ] as const;
 
