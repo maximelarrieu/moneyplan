@@ -50,7 +50,7 @@ Correspondance avec les libellés habituels des relevés de courtiers
 | Vente / cession | **Vente** | |
 | « Paiement de coupon » sur une action | **Dividende** (avec l'instrument) | |
 | « RBT de capital / distrib. +values » | **Remboursement de capital** (avec l'instrument) | Réduit le coût de revient (donc le PRU) au lieu de compter comme revenu — le traitement fiscal exact. Si le remboursement dépasse le coût restant, l'excédent est comptabilisé en plus-value réalisée |
-| « Taxe transactions financières » (TTF) | À ajouter aux **frais de l'achat** concerné | Elle fait partie du coût d'acquisition → PRU exact. En « Frais » séparés, le PRU sera légèrement sous-évalué |
+| « Taxe transactions financières » (TTF) | À **additionner au champ Frais de l'achat** concerné | Elle fait partie du coût d'acquisition → PRU exact. Le champ Frais accepte une somme : tapez `courtage+TTF`, ex. `0,99+1,50`. (Une catégorie « Frais » séparée sous-évaluerait le PRU) |
 | Versement d'espèces vers le PEA | **Versement** | C'est la référence du « montant investi » (plafond PEA) |
 | Retrait d'espèces | **Retrait** | |
 | Frais de tenue de compte, droits de garde | **Frais** | |

@@ -211,11 +211,18 @@ export function TransactionDialog({
                 id="tx-fees"
                 name="fees"
                 inputMode="decimal"
-                placeholder="1"
+                placeholder="0,99+1,50"
                 defaultValue={editing?.fees || ""}
               />
             </div>
           </div>
+        )}
+
+        {isTrade && (
+          <p className="-mt-2 text-xs text-muted">
+            Astuce : additionnez plusieurs frais, ex. courtage + TTF →{" "}
+            <span className="tabular-nums">0,99+1,50</span>.
+          </p>
         )}
 
         {!isTrade && (
