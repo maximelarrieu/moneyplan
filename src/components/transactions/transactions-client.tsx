@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteTransaction } from "@/app/transactions/actions";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,7 @@ export function TransactionsClient({
 }) {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<TxRow | null>(null);
+  const [page, setPage] = React.useState(0);
 
   // Filtres reflétés dans l'URL (partage / retour arrière conservent l'état).
   const router = useRouter();
@@ -63,6 +64,7 @@ export function TransactionsClient({
     if (value === "ALL") params.delete(key);
     else params.set(key, value);
     const qs = params.toString();
+    setPage(0); // un changement de filtre revient à la première page
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
@@ -71,6 +73,13 @@ export function TransactionsClient({
       (typeFilter === "ALL" || tx.type === typeFilter) &&
       (instrumentFilter === "ALL" || tx.instrumentId?.toString() === instrumentFilter),
   );
+
+  // Pagination pour que le tableau tienne dans la page sans scroll.
+  const PAGE_SIZE = 15;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1); // borne si la liste a rétréci
+  const start = safePage * PAGE_SIZE;
+  const visible = filtered.slice(start, start + PAGE_SIZE);
 
   const [deleting, setDeleting] = React.useState<TxRow | null>(null);
 
@@ -149,7 +158,7 @@ export function TransactionsClient({
               </TR>
             </THead>
             <TBody>
-              {filtered.map((tx) => {
+              {visible.map((tx) => {
                 const amount = amountOf(tx);
                 return (
                   <TR key={tx.id} className="hover:bg-ink/2">
@@ -211,6 +220,35 @@ export function TransactionsClient({
               })}
             </TBody>
           </Table>
+        )}
+
+        {filtered.length > PAGE_SIZE && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-edge px-5 py-3">
+            <p className="text-xs text-muted tabular-nums">
+              {start + 1}–{start + visible.length} sur {filtered.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                <ChevronLeft className="size-3.5" aria-hidden="true" /> Précédent
+              </Button>
+              <span className="text-xs text-muted tabular-nums">
+                Page {safePage + 1} / {pageCount}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= pageCount - 1}
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+              >
+                Suivant <ChevronRight className="size-3.5" aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
         )}
       </Card>
 
