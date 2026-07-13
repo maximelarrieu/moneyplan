@@ -8,6 +8,7 @@ import { AccountSwitcher, type AccountOption } from "@/components/accounts/accou
 const links = [
   { href: "/", label: "Patrimoine" },
   { href: "/comptes", label: "Comptes" },
+  { href: "/conseils", label: "Conseils" },
   { href: "/simulation", label: "Simulation" },
   { href: "/profil", label: "Profil" },
 ];

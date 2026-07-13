@@ -46,10 +46,28 @@ relancez `npm run db:push`, puis saisissez vos transactions.
 - **Matelas de sécurité** — renseignez vos dépenses mensuelles et un objectif
   (en mois) dans **Profil** ; la jauge compare vos livrets (Livret A + LDD) à
   cet objectif.
+- **Conseils** — recommandations calculées **localement** à partir de votre
+  patrimoine agrégé et de votre profil : renforcer le matelas, orienter la
+  capacité d'épargne (revenus − dépenses) vers le DCA, proximité du plafond PEA
+  (150 k€), marge de déduction PER (≈ 10 % des revenus), sur-concentration d'une
+  ligne (> 40 %). Une **synthèse IA optionnelle** (Claude) peut mettre ces
+  conseils en récit — voir ci-dessous.
 - **Détail d'une position** — cours historique avec ligne de PRU et marqueurs
   des achats, historique des opérations.
 - **Simulation** — projetez votre patrimoine en comparant votre DCA actuel à
   un DCA augmenté (rendement et horizon paramétrables), avec jalons.
+
+## Synthèse IA (optionnelle)
+
+La page **Conseils** fonctionne entièrement en local. Si vous définissez la
+variable d'environnement `ANTHROPIC_API_KEY`, un bouton « Générer la synthèse »
+apparaît : il envoie vos chiffres agrégés (et uniquement au moment du clic) à
+l'API Claude pour rédiger une synthèse des recommandations. Sans clé, la
+fonctionnalité reste masquée et rien n'est transmis à l'extérieur.
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm run dev
+```
 
 ## Où saisir les écritures de mon relevé ?
 
@@ -78,9 +96,11 @@ Correspondance avec les libellés habituels des relevés de courtiers
   `src/lib/`, testées avec Vitest : `npm test`.
 - Le PRU est calculé frais inclus ; « montant investi » = versements nets
   (la référence du plafond PEA).
-- Le modèle de données prévoit déjà plusieurs types de comptes
-  (assurance-vie, PER, PEE, LDD…) pour les évolutions futures — l'UI v1 est
-  centrée sur un compte unique.
+- L'app est multi-comptes (PEA, assurance-vie, PER, PEE, LDD, Livret A,
+  compte-titres…) : la math de portefeuille est générique par compte et
+  agrégée pour la vue Patrimoine.
+- Le conseiller (`src/lib/advisor.ts`) est un moteur de règles pur et testé ;
+  la synthèse IA est un appel Claude optionnel, isolé dans une Server Action.
 
 ## Commandes
 
