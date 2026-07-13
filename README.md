@@ -54,7 +54,7 @@ Correspondance avec les libellés habituels des relevés de courtiers
 | Versement d'espèces vers le PEA | **Versement** | C'est la référence du « montant investi » (plafond PEA) |
 | Retrait d'espèces | **Retrait** | |
 | Frais de tenue de compte, droits de garde | **Frais** | |
-| « Remboursement plaf. PEA trop perçu », régularisations créditrices | **Remboursement** | Crédite les liquidités sans gonfler le montant investi |
+| « Remboursement plaf. PEA trop perçu », régularisations créditrices | **Remboursement de frais** | Crédit de liquidités sans lien avec un titre ; ne gonfle pas le montant investi |
 
 ## Notes techniques
 

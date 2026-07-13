@@ -10,7 +10,12 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { TX_TYPE_LABELS, type InstrumentOption, type TxRow } from "./types";
+import {
+  TX_TYPE_HINTS,
+  TX_TYPE_LABELS,
+  type InstrumentOption,
+  type TxRow,
+} from "./types";
 
 export function TransactionDialog({
   open,
@@ -113,6 +118,10 @@ export function TransactionDialog({
             />
           </div>
         </div>
+
+        {TX_TYPE_HINTS[type] && (
+          <p className="-mt-2 text-xs text-muted">{TX_TYPE_HINTS[type]}</p>
+        )}
 
         {needsInstrument && (
           <div>
