@@ -44,8 +44,11 @@ export function PriceChart({
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted">
-            Aucun cours en cache pour l’instant — ils seront récupérés au
-            prochain chargement du tableau de bord.
+            Aucun cours en cache. Si la bannière du tableau de bord signale une
+            erreur HTTP 404, le ticker Yahoo est probablement erroné — corrigez-le
+            via le bouton « Modifier » ci-dessus (ex. ENGI.PA pour Euronext
+            Paris). Sinon, les cours seront récupérés au prochain chargement du
+            tableau de bord.
           </p>
         </CardContent>
       </Card>

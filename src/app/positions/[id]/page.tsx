@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { EditInstrumentButton } from "@/components/instruments/edit-instrument-button";
 import { PriceChart, type PricePointWithBuy } from "@/components/positions/price-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +70,15 @@ export default async function PositionPage({
           <Badge translate="no">{instrument.symbol}</Badge>
           <Badge>{INSTRUMENT_TYPE_LABELS[instrument.type] ?? instrument.type}</Badge>
           {instrument.isin && <Badge>{instrument.isin}</Badge>}
+          <EditInstrumentButton
+            instrument={{
+              id: instrument.id,
+              symbol: instrument.symbol,
+              name: instrument.name,
+              isin: instrument.isin,
+              type: instrument.type,
+            }}
+          />
         </div>
       </div>
 

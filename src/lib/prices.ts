@@ -101,18 +101,26 @@ export async function syncPrices({ force = false } = {}): Promise<void> {
 export interface PriceHealth {
   hasError: boolean;
   lastPriceDate: string | null;
-  errors: Array<{ symbol: string; error: string }>;
+  errors: Array<{ instrumentId: number; symbol: string; error: string }>;
 }
 
 /** État de fraîcheur des cours, pour la bannière hors-ligne du dashboard. */
 export function getPriceHealth(): PriceHealth {
   const errors = db
-    .select({ symbol: instruments.symbol, error: priceSync.lastError })
+    .select({
+      instrumentId: priceSync.instrumentId,
+      symbol: instruments.symbol,
+      error: priceSync.lastError,
+    })
     .from(priceSync)
     .innerJoin(instruments, eq(instruments.id, priceSync.instrumentId))
     .where(sql`${priceSync.lastError} IS NOT NULL`)
     .all()
-    .map((r) => ({ symbol: r.symbol, error: r.error ?? "" }));
+    .map((r) => ({
+      instrumentId: r.instrumentId,
+      symbol: r.symbol,
+      error: r.error ?? "",
+    }));
   const lastPrice = db.select({ d: max(prices.date) }).from(prices).get();
   return {
     hasError: errors.length > 0,

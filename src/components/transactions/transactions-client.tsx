@@ -8,6 +8,7 @@ import { deleteTransaction } from "@/app/transactions/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { formatDate, formatEUR, formatPrice, formatQty } from "@/lib/format";
@@ -58,10 +59,12 @@ export function TransactionsClient({
       (instrumentFilter === "ALL" || tx.instrumentId?.toString() === instrumentFilter),
   );
 
-  async function onDelete(tx: TxRow) {
-    const label = TX_TYPE_LABELS[tx.type];
-    if (!window.confirm(`Supprimer « ${label} du ${formatDate(tx.date)} » ?`)) return;
-    const result = await deleteTransaction(tx.id);
+  const [deleting, setDeleting] = React.useState<TxRow | null>(null);
+
+  async function confirmDelete() {
+    if (!deleting) return;
+    const result = await deleteTransaction(deleting.id);
+    setDeleting(null);
     if (result.ok) toast.success("Transaction supprimée");
     else toast.error(result.error ?? "Erreur");
   }
@@ -133,8 +136,7 @@ export function TransactionsClient({
               {filtered.map((tx) => {
                 const amount = amountOf(tx);
                 return (
-                  // content-visibility : la liste peut dépasser largement 50 lignes
-                  <TR key={tx.id} className="hover:bg-ink/2 [content-visibility:auto]">
+                  <TR key={tx.id} className="hover:bg-ink/2">
                     <TD>{formatDate(tx.date)}</TD>
                     <TD>
                       <Badge>{TX_TYPE_LABELS[tx.type]}</Badge>
@@ -182,7 +184,7 @@ export function TransactionsClient({
                           variant="ghost"
                           size="icon"
                           aria-label="Supprimer"
-                          onClick={() => onDelete(tx)}
+                          onClick={() => setDeleting(tx)}
                         >
                           <Trash2 className="size-3.5" aria-hidden="true" />
                         </Button>
@@ -205,6 +207,22 @@ export function TransactionsClient({
           editing={editing}
         />
       )}
+
+      <ConfirmDialog
+        open={deleting != null}
+        title="Supprimer cette transaction ?"
+        description={
+          deleting
+            ? `${TX_TYPE_LABELS[deleting.type]} du ${formatDate(deleting.date)}${
+                deleting.instrumentSymbol ? ` — ${deleting.instrumentSymbol}` : ""
+              }. Cette action est définitive.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </div>
   );
 }

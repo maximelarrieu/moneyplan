@@ -127,7 +127,24 @@ export default async function DashboardPage() {
                 : ""}
             </p>
             <p className="break-words text-xs">
-              {health.errors.map((e) => `${e.symbol} : ${e.error}`).join(" · ")}
+              {health.errors.map((e, i) => (
+                <span key={e.instrumentId}>
+                  {i > 0 && " · "}
+                  <Link
+                    href={`/positions/${e.instrumentId}`}
+                    className="font-medium text-accent hover:underline"
+                    translate="no"
+                  >
+                    {e.symbol}
+                  </Link>
+                  {` : ${e.error}`}
+                </span>
+              ))}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              Un « HTTP 404 » signale le plus souvent un ticker Yahoo erroné —
+              cliquez sur le ticker puis « Modifier » pour le corriger
+              (ex. ENGI.PA, PAEEM.PA pour Euronext Paris).
             </p>
           </div>
         </div>
