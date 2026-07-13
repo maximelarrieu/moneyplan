@@ -4,6 +4,7 @@ import { RecommendationList } from "@/components/conseils/recommendation-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { buildRecommendations } from "@/lib/advisor";
 import { buildAdvisorSnapshot } from "@/lib/advisor-snapshot";
+import { isAiAvailable } from "@/lib/ai-config";
 import { syncPrices } from "@/lib/prices";
 import { listAccounts } from "@/lib/queries";
 
@@ -37,7 +38,7 @@ export default async function ConseilsPage() {
 
   const snapshot = buildAdvisorSnapshot();
   const recommendations = buildRecommendations(snapshot);
-  const aiAvailable = Boolean(process.env.ANTHROPIC_API_KEY);
+  const aiAvailable = isAiAvailable();
 
   return (
     <div className="space-y-6">

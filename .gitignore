@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local database
 /data/
+
+# clé API IA (fichier de conf local — ne pas committer)
+/moneyplan.config.json

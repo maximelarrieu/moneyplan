@@ -59,15 +59,24 @@ relancez `npm run db:push`, puis saisissez vos transactions.
 
 ## Synthèse IA (optionnelle)
 
-La page **Conseils** fonctionne entièrement en local. Si vous définissez la
-variable d'environnement `ANTHROPIC_API_KEY`, un bouton « Générer la synthèse »
-apparaît : il envoie vos chiffres agrégés (et uniquement au moment du clic) à
-l'API Claude pour rédiger une synthèse des recommandations. Sans clé, la
-fonctionnalité reste masquée et rien n'est transmis à l'extérieur.
+La page **Conseils** fonctionne entièrement en local. Pour activer la synthèse
+rédigée par l'IA (Google Gemini), copiez le gabarit de configuration et
+renseignez votre clé :
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... npm run dev
+cp moneyplan.config.example.json moneyplan.config.json
+# puis éditez moneyplan.config.json : "geminiApiKey": "AIza..."
 ```
+
+Le fichier `moneyplan.config.json` est **git-ignoré** (votre clé n'est jamais
+committée). Une clé Gemini gratuite s'obtient sur
+[Google AI Studio](https://aistudio.google.com/apikey). Le modèle par défaut est
+`gemini-2.5-flash` (modifiable via `geminiModel`).
+
+Un bouton « Générer la synthèse » apparaît alors : il envoie vos chiffres
+agrégés — **et uniquement au moment du clic** — à l'API Gemini pour rédiger une
+synthèse des recommandations. Sans clé, la fonctionnalité reste masquée et rien
+n'est transmis à l'extérieur.
 
 ## Où saisir les écritures de mon relevé ?
 

@@ -1,8 +1,8 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { buildRecommendations } from "@/lib/advisor";
 import { buildAdvisorSnapshot } from "@/lib/advisor-snapshot";
+import { getAiConfig } from "@/lib/ai-config";
 import { formatEUR } from "@/lib/format";
 
 export interface SynthesisResult {
@@ -12,8 +12,6 @@ export interface SynthesisResult {
   /** Motif d'indisponibilité (clé absente, erreur réseau…). */
   reason?: string;
 }
-
-const MODEL = "claude-opus-4-8";
 
 const SYSTEM = `Tu es un conseiller en gestion de patrimoine français, pédagogue et prudent.
 On te fournit l'état chiffré du patrimoine d'un particulier et une liste de
@@ -30,17 +28,18 @@ Contraintes :
 - Ton sobre, tutoiement, pas d'emojis, pas de titres, du texte suivi.`;
 
 /**
- * Synthèse IA optionnelle des recommandations. Activée seulement si la variable
- * d'environnement ANTHROPIC_API_KEY est présente ; sinon renvoie ok:false sans
- * appel réseau. Les données ne quittent la machine que sur cette action explicite.
+ * Synthèse IA optionnelle des recommandations, via l'API Gemini (Google).
+ * Activée seulement si une clé est configurée dans `moneyplan.config.json`
+ * (git-ignoré) ; sinon renvoie ok:false sans appel réseau. Les données ne
+ * quittent la machine que sur cette action explicite.
  */
 export async function synthesizeAdvice(): Promise<SynthesisResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  const { geminiApiKey, geminiModel } = getAiConfig();
+  if (!geminiApiKey) {
     return {
       ok: false,
       reason:
-        "Synthèse IA désactivée : aucune clé ANTHROPIC_API_KEY configurée. Les conseils ci-dessus restent calculés localement.",
+        "Synthèse IA désactivée : aucune clé Gemini configurée. Copiez moneyplan.config.example.json en moneyplan.config.json et renseignez geminiApiKey. Les conseils ci-dessus restent calculés localement.",
     };
   }
 
@@ -75,17 +74,57 @@ export async function synthesizeAdvice(): Promise<SynthesisResult> {
   const prompt = `Voici l'état du patrimoine :\n${facts}\n\nRecommandations calculées localement :\n${rules}\n\nRédige la synthèse.`;
 
   try {
-    const client = new Anthropic({ apiKey });
-    const message = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system: SYSTEM,
-      messages: [{ role: "user", content: prompt }],
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-goog-api-key": geminiApiKey,
+      },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+          // Sur les modèles « flash », désactiver le raisonnement interne évite
+          // qu'il consomme tout le budget de sortie (réponse vide). Non supporté
+          // par les modèles « pro » (budget minimal imposé) → on ne l'envoie pas.
+          ...(geminiModel.includes("flash")
+            ? { thinkingConfig: { thinkingBudget: 0 } }
+            : {}),
+        },
+      }),
     });
-    const text = message.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("\n")
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      const hint = body.slice(0, 200);
+      return {
+        ok: false,
+        reason: `Le service de synthèse a répondu HTTP ${res.status}${hint ? ` : ${hint}` : ""}. Vérifiez votre clé Gemini. Les conseils locaux restent valables.`,
+      };
+    }
+
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        finishReason?: string;
+      }>;
+      promptFeedback?: { blockReason?: string };
+    };
+
+    const blocked = data.promptFeedback?.blockReason;
+    if (blocked) {
+      return {
+        ok: false,
+        reason: `Synthèse bloquée par le filtre de sécurité de Gemini (${blocked}).`,
+      };
+    }
+
+    const text = (data.candidates?.[0]?.content?.parts ?? [])
+      .map((p) => p.text ?? "")
+      .join("")
       .trim();
     if (!text) {
       return { ok: false, reason: "La synthèse est revenue vide. Réessayez." };
