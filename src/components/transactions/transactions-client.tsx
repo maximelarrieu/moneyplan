@@ -23,6 +23,7 @@ function amountOf(tx: TxRow): number {
       return (tx.quantity ?? 0) * (tx.unitPrice ?? 0) - tx.fees;
     case "DEPOSIT":
     case "DIVIDEND":
+    case "REFUND":
       return tx.amount ?? 0;
     case "WITHDRAWAL":
     case "FEE":

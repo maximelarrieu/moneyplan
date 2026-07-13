@@ -27,6 +27,7 @@ export const TX_TYPES = [
   "DEPOSIT",
   "WITHDRAWAL",
   "FEE",
+  "REFUND", // crédit de liquidités hors versement (ex. frais trop perçus)
 ] as const;
 
 export const accounts = sqliteTable("accounts", {

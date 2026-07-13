@@ -6,7 +6,8 @@ export type TxType =
   | "DIVIDEND"
   | "DEPOSIT"
   | "WITHDRAWAL"
-  | "FEE";
+  | "FEE"
+  | "REFUND";
 
 export interface Tx {
   instrumentId: number | null;
@@ -55,6 +56,7 @@ export function cashDelta(tx: Tx): number {
   switch (tx.type) {
     case "DEPOSIT":
     case "DIVIDEND":
+    case "REFUND": // crédité au cash mais hors « montant investi »
       return tx.amount ?? 0;
     case "WITHDRAWAL":
     case "FEE":

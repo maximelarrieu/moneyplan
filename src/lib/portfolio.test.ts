@@ -88,6 +88,16 @@ describe("cash et investi", () => {
     expect(computeCashBalance(txs)).toBeCloseTo(500 - 402 + 10 - 3 + 109 - 50);
     expect(computeInvested(txs)).toBeCloseTo(450);
   });
+
+  it("un remboursement crédite le cash sans compter comme versement", () => {
+    const txs: Tx[] = [
+      cashTx("DEPOSIT", "2026-01-02", 500),
+      cashTx("FEE", "2026-02-15", 12.5),
+      cashTx("REFUND", "2026-03-01", 12.5), // frais trop perçus remboursés
+    ];
+    expect(computeCashBalance(txs)).toBeCloseTo(500);
+    expect(computeInvested(txs)).toBeCloseTo(500); // le remboursement n'est pas un versement
+  });
 });
 
 describe("computeValueSeries", () => {

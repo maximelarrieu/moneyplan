@@ -39,6 +39,23 @@ relancez `npm run db:push`, puis saisissez vos transactions.
   un DCA augmenté (rendement annualisé et horizon paramétrables), avec jalons
   à 5/10/15/20 ans.
 
+## Où saisir les écritures de mon relevé ?
+
+Correspondance avec les libellés habituels des relevés de courtiers
+(exemples Crédit Agricole Bourse) :
+
+| Écriture du relevé | Catégorie MoneyPlan | Remarque |
+| --- | --- | --- |
+| Achat / souscription | **Achat** | La case « créer aussi le versement » couvre le flux DCA versement → achat |
+| Vente / cession | **Vente** | |
+| « Paiement de coupon » sur une action | **Dividende** (avec l'instrument) | |
+| « RBT de capital / distrib. +values » | **Dividende** (avec l'instrument) + note | Remboursement d'apport : en toute rigueur il réduit le PRU, le modèle v1 le traite comme un revenu de la position |
+| « Taxe transactions financières » (TTF) | À ajouter aux **frais de l'achat** concerné | Elle fait partie du coût d'acquisition → PRU exact. En « Frais » séparés, le PRU sera légèrement sous-évalué |
+| Versement d'espèces vers le PEA | **Versement** | C'est la référence du « montant investi » (plafond PEA) |
+| Retrait d'espèces | **Retrait** | |
+| Frais de tenue de compte, droits de garde | **Frais** | |
+| « Remboursement plaf. PEA trop perçu », régularisations créditrices | **Remboursement** | Crédite les liquidités sans gonfler le montant investi |
+
 ## Notes techniques
 
 - Next.js (App Router) + TypeScript, SQLite via Drizzle ORM + better-sqlite3,
