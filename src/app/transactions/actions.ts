@@ -14,19 +14,20 @@ import {
 } from "@/db/schema";
 import { getOrCreateDefaultAccount } from "@/lib/queries";
 import { syncPrices } from "@/lib/prices";
+import { parseAmount } from "@/lib/parse-amount";
 
 export interface ActionResult {
   ok: boolean;
   error?: string;
 }
 
-/** Nombre saisi à la française : accepte la virgule décimale. */
+/** Nombre saisi à la française : virgule décimale et addition (« 0,99+1,50 »). */
 const frNumber = (label: string) =>
   z
     .string()
     .trim()
     .min(1, `${label} est requis`)
-    .transform((s) => Number(s.replace(/\s/g, "").replace(",", ".")))
+    .transform((s) => parseAmount(s))
     .refine((n) => Number.isFinite(n), `${label} est invalide`);
 
 const positive = (label: string, message: string) =>
