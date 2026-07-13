@@ -234,6 +234,15 @@ export async function updateInstrument(form: FormData): Promise<ActionResult> {
       isin: form.get("isin") || undefined,
       type: form.get("type") || current.type,
     });
+    const wantManual = form.get("manualValuation") === "on";
+
+    // La reconversion manuel → titre coté est impossible : un montant investi
+    // ne peut pas être redécoupé en quantité × prix sans perte d'information.
+    if (current.manualValuation && !wantManual) {
+      throw new Error(
+        "Impossible de repasser un support manuel en titre coté. Supprimez l'instrument et recréez-le si besoin.",
+      );
+    }
 
     const clash = db
       .select()
@@ -252,14 +261,40 @@ export async function updateInstrument(form: FormData): Promise<ActionResult> {
         name: parsed.name,
         isin: parsed.isin ?? null,
         type: parsed.type,
+        manualValuation: wantManual,
       })
       .where(eq(instruments.id, id))
       .run();
 
-    // Ticker corrigé → le cache de cours de l'ancien ticker n'a plus de sens :
-    // on le purge et on relance une synchro (l'historique complet sera
-    // re-téléchargé depuis la première transaction de l'instrument).
-    if (current.symbol !== parsed.symbol) {
+    if (wantManual && !current.manualValuation) {
+      // Bascule titre coté → valorisation manuelle : les achats/ventes saisis
+      // en quantité × prix deviennent des montants (contribution/rachat), et le
+      // cache Yahoo (cours par part) est purgé — il ne représente pas une
+      // valorisation totale du support.
+      const txs = db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.instrumentId, id))
+        .all();
+      for (const t of txs) {
+        if (
+          (t.type === "BUY" || t.type === "SELL") &&
+          t.quantity != null &&
+          t.unitPrice != null
+        ) {
+          const amount = Math.round(t.quantity * t.unitPrice * 100) / 100;
+          db.update(transactions)
+            .set({ amount, quantity: null, unitPrice: null })
+            .where(eq(transactions.id, t.id))
+            .run();
+        }
+      }
+      db.delete(prices).where(eq(prices.instrumentId, id)).run();
+      db.delete(priceSync).where(eq(priceSync.instrumentId, id)).run();
+    } else if (!wantManual && current.symbol !== parsed.symbol) {
+      // Ticker corrigé → le cache de cours de l'ancien ticker n'a plus de sens :
+      // on le purge et on relance une synchro (l'historique complet sera
+      // re-téléchargé depuis la première transaction de l'instrument).
       db.delete(prices).where(eq(prices.instrumentId, id)).run();
       db.delete(priceSync).where(eq(priceSync.instrumentId, id)).run();
       await syncPrices();
@@ -271,6 +306,22 @@ export async function updateInstrument(form: FormData): Promise<ActionResult> {
     if (err instanceof z.ZodError) {
       return { ok: false, error: err.issues[0]?.message ?? "Saisie invalide" };
     }
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
+  }
+}
+
+/** Supprime un instrument et tout ce qui s'y rattache (transactions, cours). */
+export async function deleteInstrument(id: number): Promise<ActionResult> {
+  try {
+    if (!Number.isInteger(id) || id <= 0) throw new Error("Instrument introuvable");
+    // Les transactions de l'instrument, son cache de cours et son état de synchro.
+    db.delete(transactions).where(eq(transactions.instrumentId, id)).run();
+    db.delete(prices).where(eq(prices.instrumentId, id)).run();
+    db.delete(priceSync).where(eq(priceSync.instrumentId, id)).run();
+    db.delete(instruments).where(eq(instruments.id, id)).run();
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
   }
 }

@@ -15,6 +15,7 @@ export interface InstrumentData {
   name: string;
   isin: string | null;
   type: string;
+  manualValuation: boolean;
 }
 
 export const TICKER_HELP =
@@ -29,6 +30,7 @@ export function InstrumentDialog({
 }) {
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  const [manual, setManual] = React.useState(instrument.manualValuation);
   const symbolRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -92,9 +94,33 @@ export function InstrumentDialog({
           />
         </div>
 
+        <label className="flex cursor-pointer items-start gap-2 text-xs text-ink-2">
+          <input
+            type="checkbox"
+            name="manualValuation"
+            checked={manual}
+            onChange={(e) => setManual(e.target.checked)}
+            className="mt-0.5 size-4"
+          />
+          <span>
+            Support à valorisation manuelle (fonds €, FCPE, SCPI…) — sans cours de
+            bourse. La valeur se saisit à la main sur cette fiche.
+          </span>
+        </label>
+
+        {manual && !instrument.manualValuation && (
+          <p className="border border-edge bg-ink/2 px-3 py-2 text-xs text-ink-2">
+            En basculant en valorisation manuelle, les achats/ventes de cet
+            instrument (quantité × prix) seront convertis en montant, et le cache
+            de cours Yahoo sera purgé. Vous saisirez ensuite la valeur totale via
+            « Mettre à jour la valorisation ».
+          </p>
+        )}
+
         <p className="border-t border-edge pt-3 text-xs text-ink-2">
-          Si le ticker change, l’historique de cours en cache est purgé puis
-          re-téléchargé automatiquement depuis Yahoo Finance.
+          {manual
+            ? "Cet instrument n’est pas suivi par Yahoo : sa valeur provient des valorisations que vous saisissez."
+            : "Si le ticker change, l’historique de cours en cache est purgé puis re-téléchargé automatiquement depuis Yahoo Finance."}
         </p>
 
         {error && (
