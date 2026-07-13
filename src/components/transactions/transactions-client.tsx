@@ -24,6 +24,7 @@ function amountOf(tx: TxRow): number {
     case "DEPOSIT":
     case "DIVIDEND":
     case "REFUND":
+    case "RETURN_OF_CAPITAL":
       return tx.amount ?? 0;
     case "WITHDRAWAL":
     case "FEE":

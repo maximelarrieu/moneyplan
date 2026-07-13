@@ -40,7 +40,11 @@ export function TransactionDialog({
     if (window.matchMedia("(pointer: fine)").matches) typeRef.current?.focus();
   }, []);
 
-  const needsInstrument = type === "BUY" || type === "SELL" || type === "DIVIDEND";
+  const needsInstrument =
+    type === "BUY" ||
+    type === "SELL" ||
+    type === "DIVIDEND" ||
+    type === "RETURN_OF_CAPITAL";
   const isTrade = type === "BUY" || type === "SELL";
 
   // Garde de fermeture : ne pas perdre une saisie en cours sans confirmation.

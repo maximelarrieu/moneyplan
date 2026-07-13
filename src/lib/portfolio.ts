@@ -7,7 +7,8 @@ export type TxType =
   | "DEPOSIT"
   | "WITHDRAWAL"
   | "FEE"
-  | "REFUND";
+  | "REFUND"
+  | "RETURN_OF_CAPITAL";
 
 export interface Tx {
   instrumentId: number | null;
@@ -57,6 +58,7 @@ export function cashDelta(tx: Tx): number {
     case "DEPOSIT":
     case "DIVIDEND":
     case "REFUND": // crédité au cash mais hors « montant investi »
+    case "RETURN_OF_CAPITAL": // crédité au cash ; l'effet PRU est traité par position
       return tx.amount ?? 0;
     case "WITHDRAWAL":
     case "FEE":
@@ -119,6 +121,14 @@ export function computePositions(
       }
     } else if (tx.type === "DIVIDEND") {
       p.dividends += tx.amount ?? 0;
+    } else if (tx.type === "RETURN_OF_CAPITAL") {
+      // Remboursement d'apport : réduit le coût de revient (donc le PRU).
+      // Au-delà du coût restant, l'excédent est une plus-value réalisée
+      // (même logique que le traitement fiscal).
+      const amount = tx.amount ?? 0;
+      const reduction = Math.min(amount, p.costBasis);
+      p.costBasis -= reduction;
+      p.realizedPnL += amount - reduction;
     }
   }
 
@@ -187,7 +197,10 @@ export function computeValueSeries(
       cash += cashDelta(tx);
       if (tx.type === "DEPOSIT") invested += tx.amount ?? 0;
       if (tx.type === "WITHDRAWAL") invested -= tx.amount ?? 0;
-      if (tx.instrumentId != null && (tx.type === "BUY" || tx.type === "SELL")) {
+      if (
+        tx.instrumentId != null &&
+        (tx.type === "BUY" || tx.type === "SELL" || tx.type === "RETURN_OF_CAPITAL")
+      ) {
         let h = holdings.get(tx.instrumentId);
         if (!h) {
           h = { quantity: 0, costBasis: 0 };
@@ -197,7 +210,7 @@ export function computeValueSeries(
         if (tx.type === "BUY") {
           h.quantity += q;
           h.costBasis += q * (tx.unitPrice ?? 0) + tx.fees;
-        } else {
+        } else if (tx.type === "SELL") {
           const pru = h.quantity > EPSILON ? h.costBasis / h.quantity : 0;
           h.costBasis -= q * pru;
           h.quantity -= q;
@@ -205,6 +218,8 @@ export function computeValueSeries(
             h.quantity = 0;
             h.costBasis = 0;
           }
+        } else {
+          h.costBasis -= Math.min(tx.amount ?? 0, h.costBasis);
         }
       }
     }
