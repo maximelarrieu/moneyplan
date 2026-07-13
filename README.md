@@ -107,7 +107,7 @@ Correspondance avec les libellés habituels des relevés de courtiers
 | Commande | Effet |
 | --- | --- |
 | `npm run dev` | serveur de dev (applique le schéma DB avant) |
-| `npm run db:push` | crée/synchronise le schéma SQLite |
+| `npm run db:push` | crée/synchronise le schéma SQLite (pré-migration additive sans perte sur une base existante, puis `drizzle-kit push`) |
 | `npm run seed` | données de démo (`-- --with-fake-prices` pour un historique de cours hors-ligne) |
 | `npm test` | tests unitaires (portefeuille, simulation, parsing Yahoo) |
 | `npm run lint` | ESLint |
