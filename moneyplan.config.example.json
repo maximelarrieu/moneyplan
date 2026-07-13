@@ -1,0 +1,5 @@
+{
+  "//": "Copiez ce fichier en moneyplan.config.json (git-ignoré) et renseignez votre clé Gemini. Utilisé uniquement par la synthèse IA optionnelle de la page Conseils.",
+  "geminiApiKey": "",
+  "geminiModel": "gemini-2.5-flash"
+}

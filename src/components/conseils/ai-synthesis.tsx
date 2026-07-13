@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
- * Synthèse IA optionnelle. Le bouton n'envoie les données au service Claude
+ * Synthèse IA optionnelle. Le bouton n'envoie les données au service Gemini
  * que sur clic explicite ; sans clé configurée, l'action le signale sans appel.
  */
 export function AiSynthesis({ available }: { available: boolean }) {
@@ -27,7 +27,7 @@ export function AiSynthesis({ available }: { available: boolean }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-ink-2">
-          Met en récit les conseils ci-dessus avec Claude. Vos données ne sont
+          Met en récit les conseils ci-dessus avec Gemini. Vos données ne sont
           envoyées qu’au moment où vous cliquez, et uniquement pour cette
           synthèse.
         </p>
@@ -39,9 +39,11 @@ export function AiSynthesis({ available }: { available: boolean }) {
           </Button>
         ) : (
           <p className="border border-edge bg-page px-4 py-3 text-xs text-muted">
-            Synthèse IA indisponible : définissez la variable d’environnement{" "}
-            <code className="text-ink-2">ANTHROPIC_API_KEY</code> pour l’activer.
-            Les conseils ci-dessus fonctionnent sans elle.
+            Synthèse IA indisponible : copiez{" "}
+            <code className="text-ink-2">moneyplan.config.example.json</code> en{" "}
+            <code className="text-ink-2">moneyplan.config.json</code> et renseignez
+            votre clé <code className="text-ink-2">geminiApiKey</code> pour
+            l’activer. Les conseils ci-dessus fonctionnent sans elle.
           </p>
         )}
 
