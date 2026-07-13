@@ -52,6 +52,7 @@ export function TransactionsClient({
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<TxRow | null>(null);
   const [page, setPage] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(10);
 
   // Filtres reflétés dans l'URL (partage / retour arrière conservent l'état).
   const router = useRouter();
@@ -75,11 +76,11 @@ export function TransactionsClient({
   );
 
   // Pagination pour que le tableau tienne dans la page sans scroll.
-  const PAGE_SIZE = 15;
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Taille de page choisie par l'utilisateur (10 par défaut).
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount - 1); // borne si la liste a rétréci
-  const start = safePage * PAGE_SIZE;
-  const visible = filtered.slice(start, start + PAGE_SIZE);
+  const start = safePage * pageSize;
+  const visible = filtered.slice(start, start + pageSize);
 
   const [deleting, setDeleting] = React.useState<TxRow | null>(null);
 
@@ -133,6 +134,21 @@ export function TransactionsClient({
           {instruments.map((i) => (
             <option key={i.id} value={i.id}>
               {i.symbol} — {i.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          aria-label="Résultats par page"
+          className="ml-auto w-36"
+          value={pageSize}
+          onChange={(e) => {
+            setPageSize(Number(e.target.value));
+            setPage(0); // repartir de la première page
+          }}
+        >
+          {[10, 25, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n} par page
             </option>
           ))}
         </Select>
@@ -222,7 +238,7 @@ export function TransactionsClient({
           </Table>
         )}
 
-        {filtered.length > PAGE_SIZE && (
+        {filtered.length > pageSize && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-edge px-5 py-3">
             <p className="text-xs text-muted tabular-nums">
               {start + 1}–{start + visible.length} sur {filtered.length}
