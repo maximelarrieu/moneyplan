@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { DeleteInstrumentButton } from "@/components/instruments/delete-instrument-button";
 import { EditInstrumentButton } from "@/components/instruments/edit-instrument-button";
 import { ValuationButton } from "@/components/instruments/valuation-dialog";
 import { PriceChart, type PricePointWithBuy } from "@/components/positions/price-chart";
@@ -75,19 +76,23 @@ export default async function PositionPage({
           <Badge translate="no">{instrument.symbol}</Badge>
           <Badge>{INSTRUMENT_TYPE_LABELS[instrument.type] ?? instrument.type}</Badge>
           {instrument.isin && <Badge>{instrument.isin}</Badge>}
-          {instrument.manualValuation ? (
+          {instrument.manualValuation && (
             <ValuationButton instrumentId={instrument.id} instrumentName={instrument.name} />
-          ) : (
-            <EditInstrumentButton
-              instrument={{
-                id: instrument.id,
-                symbol: instrument.symbol,
-                name: instrument.name,
-                isin: instrument.isin,
-                type: instrument.type,
-              }}
-            />
           )}
+          <EditInstrumentButton
+            instrument={{
+              id: instrument.id,
+              symbol: instrument.symbol,
+              name: instrument.name,
+              isin: instrument.isin,
+              type: instrument.type,
+              manualValuation: instrument.manualValuation,
+            }}
+          />
+          <DeleteInstrumentButton
+            instrumentId={instrument.id}
+            instrumentName={instrument.name}
+          />
         </div>
       </div>
 
