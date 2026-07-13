@@ -19,11 +19,13 @@ import {
 
 export function TransactionDialog({
   open,
+  accountId,
   onClose,
   instruments,
   editing,
 }: {
   open: boolean;
+  accountId: number;
   onClose: () => void;
   instruments: InstrumentOption[];
   editing: TxRow | null;
@@ -34,6 +36,7 @@ export function TransactionDialog({
   const [instrumentId, setInstrumentId] = React.useState<string>(
     editing?.instrumentId?.toString() ?? instruments[0]?.id.toString() ?? "new",
   );
+  const [newManual, setNewManual] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
   const dirtyRef = React.useRef(false);
@@ -51,6 +54,13 @@ export function TransactionDialog({
     type === "DIVIDEND" ||
     type === "RETURN_OF_CAPITAL";
   const isTrade = type === "BUY" || type === "SELL";
+  // L'instrument sélectionné (ou en création) est-il à valorisation manuelle ?
+  const selectedManual =
+    instrumentId === "new"
+      ? newManual
+      : !!instruments.find((i) => i.id.toString() === instrumentId)?.manualValuation;
+  const marketTrade = isTrade && !selectedManual; // quantité × prix
+  const amountTrade = isTrade && selectedManual; // montant (fonds €…)
 
   // Garde de fermeture : ne pas perdre une saisie en cours sans confirmation.
   const [confirmAbandon, setConfirmAbandon] = React.useState(false);
@@ -89,6 +99,7 @@ export function TransactionDialog({
         className="space-y-4"
       >
         {editing && <input type="hidden" name="id" value={editing.id} />}
+        <input type="hidden" name="accountId" value={accountId} />
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -164,7 +175,7 @@ export function TransactionDialog({
                 </Select>
               </div>
             </div>
-            <p className="text-xs text-muted">{TICKER_HELP}</p>
+            {!selectedManual && <p className="text-xs text-muted">{TICKER_HELP}</p>}
             <div>
               <Label htmlFor="new-name">Nom</Label>
               <Input
@@ -178,51 +189,92 @@ export function TransactionDialog({
               <Label htmlFor="new-isin">ISIN (optionnel)</Label>
               <Input id="new-isin" name="newIsin" placeholder="IE0002XZSHO1" spellCheck={false} />
             </div>
+            <label className="flex cursor-pointer items-start gap-2 text-xs text-ink-2">
+              <input
+                type="checkbox"
+                name="newManual"
+                checked={newManual}
+                onChange={(e) => setNewManual(e.target.checked)}
+                className="mt-0.5 size-4"
+              />
+              <span>
+                Support à valorisation manuelle (fonds €, SCPI…) — sans cours de
+                bourse. Les contributions se saisissent en montant et la valeur se
+                met à jour à la main.
+              </span>
+            </label>
           </div>
         )}
 
-        {isTrade && (
-          <div className="grid grid-cols-3 gap-3">
+        {marketTrade && (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="tx-quantity">Quantité</Label>
+                <Input
+                  id="tx-quantity"
+                  name="quantity"
+                  inputMode="decimal"
+                  placeholder="10"
+                  required
+                  defaultValue={editing?.quantity ?? ""}
+                />
+              </div>
+              <div>
+                <Label htmlFor="tx-price">Prix unitaire (€)</Label>
+                <Input
+                  id="tx-price"
+                  name="unitPrice"
+                  inputMode="decimal"
+                  placeholder="5,43"
+                  required
+                  defaultValue={editing?.unitPrice ?? ""}
+                />
+              </div>
+              <div>
+                <Label htmlFor="tx-fees">Frais (€)</Label>
+                <Input
+                  id="tx-fees"
+                  name="fees"
+                  inputMode="decimal"
+                  placeholder="0,99+1,50"
+                  defaultValue={editing?.fees || ""}
+                />
+              </div>
+            </div>
+            <p className="-mt-2 text-xs text-muted">
+              Astuce : additionnez plusieurs frais, ex. courtage + TTF →{" "}
+              <span className="tabular-nums">0,99+1,50</span>.
+            </p>
+          </>
+        )}
+
+        {amountTrade && (
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="tx-quantity">Quantité</Label>
+              <Label htmlFor="tx-amount-trade">
+                {type === "BUY" ? "Montant investi (€)" : "Montant retiré (€)"}
+              </Label>
               <Input
-                id="tx-quantity"
-                name="quantity"
+                id="tx-amount-trade"
+                name="amount"
                 inputMode="decimal"
-                placeholder="10"
+                placeholder="1000"
                 required
-                defaultValue={editing?.quantity ?? ""}
+                defaultValue={editing?.amount ?? ""}
               />
             </div>
             <div>
-              <Label htmlFor="tx-price">Prix unitaire (€)</Label>
+              <Label htmlFor="tx-fees-trade">Frais (€)</Label>
               <Input
-                id="tx-price"
-                name="unitPrice"
-                inputMode="decimal"
-                placeholder="5,43"
-                required
-                defaultValue={editing?.unitPrice ?? ""}
-              />
-            </div>
-            <div>
-              <Label htmlFor="tx-fees">Frais (€)</Label>
-              <Input
-                id="tx-fees"
+                id="tx-fees-trade"
                 name="fees"
                 inputMode="decimal"
-                placeholder="0,99+1,50"
+                placeholder="0"
                 defaultValue={editing?.fees || ""}
               />
             </div>
           </div>
-        )}
-
-        {isTrade && (
-          <p className="-mt-2 text-xs text-muted">
-            Astuce : additionnez plusieurs frais, ex. courtage + TTF →{" "}
-            <span className="tabular-nums">0,99+1,50</span>.
-          </p>
         )}
 
         {!isTrade && (

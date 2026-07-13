@@ -14,6 +14,8 @@ import {
 } from "../src/db/schema";
 
 const WITH_FAKE_PRICES = process.argv.includes("--with-fake-prices");
+// --multi : ajoute un Livret A et une assurance-vie (fonds € + UC) au PEA.
+const MULTI = process.argv.includes("--multi");
 const MONTHS = 18;
 
 function iso(d: Date): string {
@@ -166,11 +168,116 @@ function main() {
     ]);
   }
 
+  if (MULTI) seedMultiAccounts();
+
   const txCount = db.select().from(transactions).all().length;
+  const accCount = db.select().from(accounts).all().length;
   console.log(
-    `Seed OK : 1 compte, 3 instruments, ${txCount} transactions` +
+    `Seed OK : ${accCount} compte(s), ${txCount} transactions` +
       (WITH_FAKE_PRICES ? ", cours synthétiques inclus." : "."),
   );
+}
+
+/** Livret A (versements + intérêt) et assurance-vie (fonds € manuel + UC ETF). */
+function seedMultiAccounts() {
+  const now = new Date().toISOString();
+
+  const livret = db
+    .insert(accounts)
+    .values({ name: "Livret A", type: "LIVRET_A", createdAt: now })
+    .returning()
+    .get();
+  for (let m = 12; m >= 1; m--) {
+    db.insert(transactions)
+      .values({ accountId: livret.id, type: "DEPOSIT", date: dcaDate(m), amount: 300, fees: 0 })
+      .run();
+  }
+  db.insert(transactions)
+    .values({
+      accountId: livret.id,
+      type: "INTEREST",
+      date: dcaDate(0),
+      amount: 84.5,
+      fees: 0,
+      note: "Intérêts annuels",
+    })
+    .run();
+
+  const av = db
+    .insert(accounts)
+    .values({ name: "Assurance-vie Linxea", type: "ASSURANCE_VIE", createdAt: now })
+    .returning()
+    .get();
+
+  // Fonds euros : support à valorisation manuelle.
+  const fondsEuros = db
+    .insert(instruments)
+    .values({
+      symbol: "FONDS-EUROS-LINXEA",
+      name: "Fonds euros Linxea",
+      type: "FONDS",
+      manualValuation: true,
+    })
+    .returning()
+    .get();
+  db.insert(transactions)
+    .values({ accountId: av.id, type: "DEPOSIT", date: dcaDate(14), amount: 10000, fees: 0 })
+    .run();
+  db.insert(transactions)
+    .values({
+      accountId: av.id,
+      instrumentId: fondsEuros.id,
+      type: "BUY",
+      date: dcaDate(14),
+      amount: 10000,
+      fees: 0,
+      note: "Versement initial fonds €",
+    })
+    .run();
+  // Valorisation courante (relevé assureur).
+  db.insert(prices)
+    .values({ instrumentId: fondsEuros.id, date: dcaDate(0), close: 10480 })
+    .run();
+  db.insert(priceSync)
+    .values({ instrumentId: fondsEuros.id, lastFetchedAt: now, lastError: null })
+    .run();
+
+  // Unité de compte : ETF de marché (cours Yahoo synthétiques si demandés).
+  const uc = db
+    .insert(instruments)
+    .values({ symbol: "CW8.PA", name: "Amundi MSCI World UC", type: "ETF" })
+    .returning()
+    .get();
+  let ucShares = 0;
+  for (let m = 12; m >= 0; m -= 3) {
+    const price = r2(priceAt.WPEA(MONTHS - 1 - m) * 90);
+    const qty = Math.floor(500 / price);
+    if (qty <= 0) continue;
+    ucShares += qty;
+    db.insert(transactions)
+      .values({
+        accountId: av.id,
+        type: "DEPOSIT",
+        date: dcaDate(m),
+        amount: r2(qty * price),
+        fees: 0,
+      })
+      .run();
+    db.insert(transactions)
+      .values({
+        accountId: av.id,
+        instrumentId: uc.id,
+        type: "BUY",
+        date: dcaDate(m),
+        quantity: qty,
+        unitPrice: price,
+        fees: 0,
+      })
+      .run();
+  }
+  if (WITH_FAKE_PRICES && ucShares > 0) {
+    seedFakePrices([{ id: uc.id, price: (mo) => priceAt.WPEA(mo) * 90 }]);
+  }
 }
 
 /** Cours quotidiens synthétiques (jours ouvrés) interpolés sur les ancres mensuelles. */

@@ -1,16 +1,20 @@
-// Page de projection : les entrées viennent du portefeuille réel.
+// Page de projection : les entrées viennent du patrimoine réel (tous comptes).
 import { SimulationClient } from "@/components/simulation/simulation-client";
 import { computeCashBalance, computePositions } from "@/lib/portfolio";
 import { getLatestPrices } from "@/lib/prices";
-import { getInstruments, getOrCreateDefaultAccount, getTransactionsAsc } from "@/lib/queries";
+import {
+  getAllTransactionsAsc,
+  getInstruments,
+  getManualInstrumentIds,
+} from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function SimulationPage() {
-  const account = getOrCreateDefaultAccount();
-  const txs = getTransactionsAsc(account.id);
+  const txs = getAllTransactionsAsc();
   const ids = getInstruments().map((i) => i.id);
-  const positions = computePositions(txs, getLatestPrices(ids));
+  const manualIds = getManualInstrumentIds();
+  const positions = computePositions(txs, getLatestPrices(ids), manualIds);
   const currentValue =
     positions.reduce((s, p) => s + p.marketValue, 0) + computeCashBalance(txs);
 

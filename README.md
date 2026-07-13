@@ -1,7 +1,8 @@
 # MoneyPlan
 
-Suivi de PEA et de DCA mensuel : positions, PRU, plus-values, dividendes,
-graphes dans le temps et simulation de scénarios d'investissement.
+Suivi de patrimoine multi-comptes (PEA, assurance-vie, PER, PEE, livrets…) :
+positions, PRU, plus-values, dividendes, matelas de sécurité, graphes dans le
+temps et simulation de scénarios d'investissement.
 
 App web locale — vos données restent dans un fichier SQLite sur votre machine.
 
@@ -11,6 +12,7 @@ App web locale — vos données restent dans un fichier SQLite sur votre machine
 npm install
 npm run db:push        # crée data/moneyplan.db
 npm run seed           # optionnel : données de démonstration (18 mois de DCA)
+                       #   ajoutez --multi pour un livret + une assurance-vie
 npm run dev            # http://localhost:3000
 ```
 
@@ -25,19 +27,29 @@ relancez `npm run db:push`, puis saisissez vos transactions.
 
 ## Utilisation
 
-- **Transactions** — saisissez versements, achats, ventes, dividendes, retraits
-  et frais. À l'achat, une case (cochée par défaut) crée automatiquement le
-  versement correspondant : le flux DCA « versement → achat » se saisit en une
-  fois. Les instruments se créent à la volée (ticker Yahoo, ex. `WPEA.PA`,
-  `ESE.PA`, `TTE.PA`).
-- **Tableau de bord** — valeur totale, montant investi, plus-value latente,
-  liquidités, dividendes ; graphe valeur vs versements cumulés (1A/3A/Max) ;
-  répartition ; table des positions (PRU, dernier cours, ± value, poids).
+- **Patrimoine** (accueil) — valeur nette agrégée de tous les comptes, courbe
+  dans le temps, répartition par enveloppe, jauge du matelas de sécurité, et
+  tableau récapitulatif par compte.
+- **Comptes** — créez et gérez plusieurs comptes (PEA, assurance-vie, PER, PEE,
+  LDD, Livret A, compte-titres…). Chaque compte a son propre tableau de bord
+  (valeur, plus-value, graphe, répartition, positions), accessible via le
+  sélecteur de compte en haut.
+- **Transactions** (par compte) — versements, achats, ventes, dividendes,
+  retraits, frais, **intérêts** (livrets) et remboursements. À l'achat, une
+  case (cochée par défaut) crée le versement correspondant. Les instruments se
+  créent à la volée (ticker Yahoo, ex. `WPEA.PA`) ou en **valorisation
+  manuelle** (fonds €, SCPI… sans cours de bourse).
+- **Supports sans cours** — pour un fonds euros ou un livret : les livrets se
+  suivent en solde (versements/retraits/intérêts) ; les fonds € se saisissent
+  en montant investi, et leur valeur se met à jour à la main via « Mettre à
+  jour la valorisation » sur la page du support.
+- **Matelas de sécurité** — renseignez vos dépenses mensuelles et un objectif
+  (en mois) dans **Profil** ; la jauge compare vos livrets (Livret A + LDD) à
+  cet objectif.
 - **Détail d'une position** — cours historique avec ligne de PRU et marqueurs
-  des achats DCA, historique des opérations.
-- **Simulation** — projetez votre portefeuille en comparant votre DCA actuel à
-  un DCA augmenté (rendement annualisé et horizon paramétrables), avec jalons
-  à 5/10/15/20 ans.
+  des achats, historique des opérations.
+- **Simulation** — projetez votre patrimoine en comparant votre DCA actuel à
+  un DCA augmenté (rendement et horizon paramétrables), avec jalons.
 
 ## Où saisir les écritures de mon relevé ?
 
@@ -54,6 +66,7 @@ Correspondance avec les libellés habituels des relevés de courtiers
 | Versement d'espèces vers le PEA | **Versement** | C'est la référence du « montant investi » (plafond PEA) |
 | Retrait d'espèces | **Retrait** | |
 | Frais de tenue de compte, droits de garde | **Frais** | |
+| Intérêts d'un livret (Livret A, LDD…) | **Intérêts** | Crédités au cash, comptés en gain — hors montant investi |
 | « Remboursement plaf. PEA trop perçu », régularisations créditrices | **Remboursement de frais** | Crédit de liquidités sans lien avec un titre ; ne gonfle pas le montant investi |
 
 ## Notes techniques

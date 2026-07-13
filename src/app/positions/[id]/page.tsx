@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { EditInstrumentButton } from "@/components/instruments/edit-instrument-button";
+import { ValuationButton } from "@/components/instruments/valuation-dialog";
 import { PriceChart, type PricePointWithBuy } from "@/components/positions/price-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,11 @@ import { TX_TYPE_LABELS } from "@/components/transactions/types";
 import { formatDate, formatEUR, formatPct, formatPrice, formatQty, formatSignedEUR } from "@/lib/format";
 import { computePositions } from "@/lib/portfolio";
 import { getLatestPrices, getPriceHistories } from "@/lib/prices";
-import { getInstrument, getOrCreateDefaultAccount, getTransactionsAsc } from "@/lib/queries";
+import {
+  getInstrument,
+  getInstrumentTransactionsAsc,
+  getManualInstrumentIds,
+} from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -31,10 +36,10 @@ export default async function PositionPage({
   const instrument = Number.isInteger(id) ? getInstrument(id) : undefined;
   if (!instrument) notFound();
 
-  const account = getOrCreateDefaultAccount();
-  const allTxs = getTransactionsAsc(account.id);
-  const txs = allTxs.filter((t) => t.instrumentId === id);
-  const position = computePositions(allTxs, getLatestPrices([id])).find(
+  // Instrument global : on agrège ses transactions sur tous les comptes.
+  const txs = getInstrumentTransactionsAsc(id);
+  const manualIds = getManualInstrumentIds();
+  const position = computePositions(txs, getLatestPrices([id]), manualIds).find(
     (p) => p.instrumentId === id,
   );
   const history = getPriceHistories([id]).get(id) ?? [];
@@ -63,22 +68,26 @@ export default async function PositionPage({
           href="/"
           className="mb-2 inline-flex items-center gap-1 text-xs text-muted hover:text-ink"
         >
-          <ArrowLeft className="size-3.5" aria-hidden="true" /> Tableau de bord
+          <ArrowLeft className="size-3.5" aria-hidden="true" /> Patrimoine
         </Link>
         <div className="flex flex-wrap items-baseline gap-2">
           <h1 className="text-pretty font-serif text-3xl tracking-tight">{instrument.name}</h1>
           <Badge translate="no">{instrument.symbol}</Badge>
           <Badge>{INSTRUMENT_TYPE_LABELS[instrument.type] ?? instrument.type}</Badge>
           {instrument.isin && <Badge>{instrument.isin}</Badge>}
-          <EditInstrumentButton
-            instrument={{
-              id: instrument.id,
-              symbol: instrument.symbol,
-              name: instrument.name,
-              isin: instrument.isin,
-              type: instrument.type,
-            }}
-          />
+          {instrument.manualValuation ? (
+            <ValuationButton instrumentId={instrument.id} instrumentName={instrument.name} />
+          ) : (
+            <EditInstrumentButton
+              instrument={{
+                id: instrument.id,
+                symbol: instrument.symbol,
+                name: instrument.name,
+                isin: instrument.isin,
+                type: instrument.type,
+              }}
+            />
+          )}
         </div>
       </div>
 

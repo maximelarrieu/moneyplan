@@ -12,7 +12,7 @@ import {
   INSTRUMENT_TYPES,
   TX_TYPES,
 } from "@/db/schema";
-import { getOrCreateDefaultAccount } from "@/lib/queries";
+import { getAccount, getFirstAccount } from "@/lib/queries";
 import { syncPrices } from "@/lib/prices";
 import { parseAmount } from "@/lib/parse-amount";
 
@@ -51,15 +51,18 @@ const newInstrumentSchema = z.object({
   type: z.enum(INSTRUMENT_TYPES),
 });
 
-function resolveInstrumentId(form: FormData): number {
+/** Résout l'instrument (existant ou créé à la volée) et indique s'il est manuel. */
+function resolveInstrument(form: FormData): { id: number; manual: boolean } {
   const raw = String(form.get("instrumentId") ?? "");
   if (raw !== "new") {
     const id = Number(raw);
     if (!Number.isInteger(id) || id <= 0) {
       throw new Error("Choisissez un instrument");
     }
-    return id;
+    const inst = db.select().from(instruments).where(eq(instruments.id, id)).get();
+    return { id, manual: !!inst?.manualValuation };
   }
+  const manual = form.get("newManual") === "on";
   const parsed = newInstrumentSchema.parse({
     symbol: form.get("newSymbol"),
     name: form.get("newName"),
@@ -71,22 +74,30 @@ function resolveInstrumentId(form: FormData): number {
     .from(instruments)
     .where(eq(instruments.symbol, parsed.symbol))
     .get();
-  if (existing) return existing.id;
-  return db
+  if (existing) return { id: existing.id, manual: !!existing.manualValuation };
+  const id = db
     .insert(instruments)
     .values({
       symbol: parsed.symbol,
       name: parsed.name,
       isin: parsed.isin ?? null,
       type: parsed.type,
+      manualValuation: manual,
     })
     .returning()
     .get().id;
+  return { id, manual };
+}
+
+function resolveAccountId(form: FormData): number {
+  const raw = Number(form.get("accountId"));
+  if (Number.isInteger(raw) && raw > 0 && getAccount(raw)) return raw;
+  return getFirstAccount().id; // filet de sécurité
 }
 
 export async function saveTransaction(form: FormData): Promise<ActionResult> {
   try {
-    const account = getOrCreateDefaultAccount();
+    const accountId = resolveAccountId(form);
     const type = z.enum(TX_TYPES).parse(form.get("type"));
     const date = dateSchema.parse(form.get("date"));
     const note = String(form.get("note") ?? "").trim() || null;
@@ -94,40 +105,62 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
     const id = idRaw ? Number(idRaw) : null;
 
     let values: typeof transactions.$inferInsert;
+    let depositTotal = 0; // pour le versement auto d'un achat
 
     if (type === "BUY" || type === "SELL") {
-      const instrumentId = resolveInstrumentId(form);
-      const quantity = positive(
-        "La quantité",
-        "La quantité doit être supérieure à zéro",
-      ).parse(form.get("quantity"));
-      const unitPrice = positive(
-        "Le prix unitaire",
-        "Le prix unitaire doit être supérieur à zéro",
-      ).parse(form.get("unitPrice"));
+      const { id: instrumentId, manual } = resolveInstrument(form);
       const fees = nonNegative(
         "Les frais",
         "Les frais doivent être positifs ou nuls",
       ).parse(form.get("fees") || "0");
-      values = {
-        accountId: account.id,
-        instrumentId,
-        type,
-        date,
-        quantity,
-        unitPrice,
-        fees,
-        amount: null,
-        note,
-      };
+      if (manual) {
+        // Support à valorisation manuelle : contribution/rachat en montant.
+        const amount = positive(
+          "Le montant",
+          "Le montant doit être supérieur à zéro",
+        ).parse(form.get("amount"));
+        values = {
+          accountId,
+          instrumentId,
+          type,
+          date,
+          quantity: null,
+          unitPrice: null,
+          fees,
+          amount,
+          note,
+        };
+        depositTotal = amount + fees;
+      } else {
+        const quantity = positive(
+          "La quantité",
+          "La quantité doit être supérieure à zéro",
+        ).parse(form.get("quantity"));
+        const unitPrice = positive(
+          "Le prix unitaire",
+          "Le prix unitaire doit être supérieur à zéro",
+        ).parse(form.get("unitPrice"));
+        values = {
+          accountId,
+          instrumentId,
+          type,
+          date,
+          quantity,
+          unitPrice,
+          fees,
+          amount: null,
+          note,
+        };
+        depositTotal = quantity * unitPrice + fees;
+      }
     } else if (type === "DIVIDEND" || type === "RETURN_OF_CAPITAL") {
-      const instrumentId = resolveInstrumentId(form);
+      const { id: instrumentId } = resolveInstrument(form);
       const amount = positive(
         "Le montant",
         "Le montant doit être supérieur à zéro",
       ).parse(form.get("amount"));
       values = {
-        accountId: account.id,
+        accountId,
         instrumentId,
         type,
         date,
@@ -138,12 +171,13 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
         note,
       };
     } else {
+      // DEPOSIT / WITHDRAWAL / FEE / REFUND / INTEREST : mouvement de cash.
       const amount = positive(
         "Le montant",
         "Le montant doit être supérieur à zéro",
       ).parse(form.get("amount"));
       values = {
-        accountId: account.id,
+        accountId,
         instrumentId: null,
         type,
         date,
@@ -161,18 +195,16 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
       db.insert(transactions).values(values).run();
       // Flux DCA typique : le versement qui finance l'achat, créé d'un coup.
       if (type === "BUY" && form.get("withDeposit") === "on") {
-        const total =
-          (values.quantity ?? 0) * (values.unitPrice ?? 0) + (values.fees ?? 0);
         db.insert(transactions)
           .values({
-            accountId: account.id,
+            accountId,
             instrumentId: null,
             type: "DEPOSIT",
             date,
             quantity: null,
             unitPrice: null,
             fees: 0,
-            amount: Math.round(total * 100) / 100,
+            amount: Math.round(depositTotal * 100) / 100,
             note: "Versement lié à l’achat",
           })
           .run();
@@ -256,4 +288,35 @@ export async function deleteTransaction(id: number): Promise<ActionResult> {
 export async function refreshPrices(): Promise<void> {
   await syncPrices({ force: true });
   revalidatePath("/", "layout");
+}
+
+/** Enregistre la valorisation totale d'un support à valorisation manuelle. */
+export async function saveValuation(form: FormData): Promise<ActionResult> {
+  try {
+    const instrumentId = Number(form.get("instrumentId"));
+    if (!Number.isInteger(instrumentId) || instrumentId <= 0) {
+      throw new Error("Instrument introuvable");
+    }
+    const date = dateSchema.parse(form.get("date"));
+    const value = nonNegative(
+      "La valorisation",
+      "La valorisation doit être positive ou nulle",
+    ).parse(form.get("value"));
+
+    db.insert(prices)
+      .values({ instrumentId, date, close: value })
+      .onConflictDoUpdate({
+        target: [prices.instrumentId, prices.date],
+        set: { close: value },
+      })
+      .run();
+
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return { ok: false, error: err.issues[0]?.message ?? "Saisie invalide" };
+    }
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
+  }
 }

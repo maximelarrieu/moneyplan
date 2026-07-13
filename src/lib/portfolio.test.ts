@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  aggregateValueSeries,
+  allocationFromValues,
   computeAllocation,
   computeCashBalance,
+  computeInterest,
   computeInvested,
   computePositions,
   computeValueSeries,
@@ -125,6 +128,98 @@ describe("cash et investi", () => {
     ];
     expect(computeCashBalance(txs)).toBeCloseTo(500);
     expect(computeInvested(txs)).toBeCloseTo(500); // le remboursement n'est pas un versement
+  });
+
+  it("les intérêts de livret créditent le cash comme gain, hors investi", () => {
+    const txs: Tx[] = [
+      cashTx("DEPOSIT", "2026-01-02", 1000),
+      cashTx("INTEREST", "2026-12-31", 22.5), // intérêts Livret A
+    ];
+    expect(computeCashBalance(txs)).toBeCloseTo(1022.5);
+    expect(computeInvested(txs)).toBeCloseTo(1000); // les intérêts ne sont pas un versement
+    expect(computeInterest(txs)).toBeCloseTo(22.5);
+  });
+});
+
+describe("instrument à valorisation manuelle (fonds €)", () => {
+  const contrib = (instrumentId: number, date: string, amount: number, fees = 0): Tx => ({
+    instrumentId,
+    type: "BUY",
+    date,
+    quantity: null,
+    unitPrice: null,
+    fees,
+    amount,
+  });
+  const redeem = (instrumentId: number, date: string, amount: number): Tx => ({
+    instrumentId,
+    type: "SELL",
+    date,
+    quantity: null,
+    unitPrice: null,
+    fees: 0,
+    amount,
+  });
+
+  it("valorise par la dernière valorisation, gain = valeur − contribué, PRU absent", () => {
+    const manual = new Set([7]);
+    const txs = [contrib(7, "2026-01-02", 10000), contrib(7, "2026-06-02", 2000)];
+    const [pos] = computePositions(
+      txs,
+      new Map([[7, { date: "2026-07-01", close: 12450 }]]), // valorisation totale
+      manual,
+    );
+    expect(pos.manual).toBe(true);
+    expect(pos.held).toBe(true);
+    expect(pos.pru).toBeNull();
+    expect(pos.costBasis).toBeCloseTo(12000);
+    expect(pos.marketValue).toBeCloseTo(12450);
+    expect(pos.unrealizedPnL).toBeCloseTo(450);
+  });
+
+  it("un rachat réduit le contribué et réalise l'excédent", () => {
+    const manual = new Set([7]);
+    const txs = [contrib(7, "2026-01-02", 10000), redeem(7, "2026-06-02", 3000)];
+    const [pos] = computePositions(txs, new Map(), manual);
+    expect(pos.costBasis).toBeCloseTo(7000);
+    const txs2 = [contrib(7, "2026-01-02", 1000), redeem(7, "2026-06-02", 1200)];
+    const [pos2] = computePositions(txs2, new Map(), manual);
+    expect(pos2.costBasis).toBe(0);
+    expect(pos2.realizedPnL).toBeCloseTo(200);
+  });
+
+  it("computeValueSeries valorise le support manuel (valorisation puis fallback contribué)", () => {
+    const manual = new Set([7]);
+    const txs: Tx[] = [contrib(7, "2026-01-02", 1000)];
+    const history = new Map<number, PricePoint[]>([
+      [7, [{ date: "2026-01-04", close: 1050 }]],
+    ]);
+    const series = computeValueSeries(txs, history, "2026-01-04", manual);
+    // cash = -1000 (contribution), position manuelle = contribué puis valorisation
+    expect(series[0].value).toBeCloseTo(0); // 1000 (contribué) − 1000 (cash)
+    expect(series[2].value).toBeCloseTo(50); // 1050 − 1000
+  });
+});
+
+describe("agrégation patrimoniale", () => {
+  it("aggregateValueSeries somme des comptes à dates de départ différentes", () => {
+    const a: Tx[] = [cashTx("DEPOSIT", "2026-01-01", 100)];
+    const b: Tx[] = [cashTx("DEPOSIT", "2026-01-03", 200)];
+    const sa = computeValueSeries(a, new Map(), "2026-01-04");
+    const sb = computeValueSeries(b, new Map(), "2026-01-04");
+    const agg = aggregateValueSeries([sa, sb], "2026-01-04");
+    expect(agg[0]).toMatchObject({ date: "2026-01-01", value: 100 }); // b pas encore là
+    expect(agg[agg.length - 1].value).toBeCloseTo(300); // 100 + 200
+  });
+
+  it("allocationFromValues normalise et trie", () => {
+    const slices = allocationFromValues([
+      { label: "PEA", value: 6000 },
+      { label: "Livret A", value: 4000 },
+      { label: "Vide", value: 0 },
+    ]);
+    expect(slices.map((s) => s.label)).toEqual(["PEA", "Livret A"]);
+    expect(slices.reduce((s, x) => s + x.pct, 0)).toBeCloseTo(1);
   });
 });
 
