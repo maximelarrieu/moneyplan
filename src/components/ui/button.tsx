@@ -22,8 +22,7 @@ const sizes: Record<Size, string> = {
   icon: "size-8",
 };
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ComponentProps<"button"> {
   variant?: Variant;
   size?: Size;
 }

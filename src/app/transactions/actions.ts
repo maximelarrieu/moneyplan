@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { instruments, transactions, INSTRUMENT_TYPES, TX_TYPES } from "@/db/schema";
+import {
+  instruments,
+  prices,
+  priceSync,
+  transactions,
+  INSTRUMENT_TYPES,
+  TX_TYPES,
+} from "@/db/schema";
 import { getOrCreateDefaultAccount } from "@/lib/queries";
 import { syncPrices } from "@/lib/prices";
 
@@ -169,6 +176,60 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
           })
           .run();
       }
+    }
+
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return { ok: false, error: err.issues[0]?.message ?? "Saisie invalide" };
+    }
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
+  }
+}
+
+export async function updateInstrument(form: FormData): Promise<ActionResult> {
+  try {
+    const id = Number(form.get("id"));
+    if (!Number.isInteger(id) || id <= 0) throw new Error("Instrument introuvable");
+    const current = db.select().from(instruments).where(eq(instruments.id, id)).get();
+    if (!current) throw new Error("Instrument introuvable");
+
+    const parsed = newInstrumentSchema.parse({
+      symbol: form.get("symbol"),
+      name: form.get("name"),
+      isin: form.get("isin") || undefined,
+      type: form.get("type") || current.type,
+    });
+
+    const clash = db
+      .select()
+      .from(instruments)
+      .where(eq(instruments.symbol, parsed.symbol))
+      .get();
+    if (clash && clash.id !== id) {
+      throw new Error(
+        `Le ticker ${parsed.symbol} est déjà utilisé par « ${clash.name} »`,
+      );
+    }
+
+    db.update(instruments)
+      .set({
+        symbol: parsed.symbol,
+        name: parsed.name,
+        isin: parsed.isin ?? null,
+        type: parsed.type,
+      })
+      .where(eq(instruments.id, id))
+      .run();
+
+    // Ticker corrigé → le cache de cours de l'ancien ticker n'a plus de sens :
+    // on le purge et on relance une synchro (l'historique complet sera
+    // re-téléchargé depuis la première transaction de l'instrument).
+    if (current.symbol !== parsed.symbol) {
+      db.delete(prices).where(eq(prices.instrumentId, id)).run();
+      db.delete(priceSync).where(eq(priceSync.instrumentId, id)).run();
+      await syncPrices();
     }
 
     revalidatePath("/", "layout");

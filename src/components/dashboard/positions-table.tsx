@@ -47,6 +47,8 @@ export function PositionsTable({ rows }: { rows: PositionRow[] }) {
                 <Link
                   href={`/positions/${row.instrumentId}`}
                   className="font-medium text-accent hover:underline"
+                  title="Voir le cours, le PRU et les achats DCA"
+                  translate="no"
                 >
                   {row.symbol}
                 </Link>

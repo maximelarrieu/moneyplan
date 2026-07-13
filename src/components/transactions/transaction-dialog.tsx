@@ -3,7 +3,9 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { saveTransaction } from "@/app/transactions/actions";
+import { TICKER_HELP } from "@/components/instruments/instrument-dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,14 +44,10 @@ export function TransactionDialog({
   const isTrade = type === "BUY" || type === "SELL";
 
   // Garde de fermeture : ne pas perdre une saisie en cours sans confirmation.
+  const [confirmAbandon, setConfirmAbandon] = React.useState(false);
   const requestClose = React.useCallback(() => {
-    if (
-      dirtyRef.current &&
-      !window.confirm("Abandonner la saisie en cours ?")
-    ) {
-      return;
-    }
-    onClose();
+    if (dirtyRef.current) setConfirmAbandon(true);
+    else onClose();
   }, [onClose]);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -153,6 +151,7 @@ export function TransactionDialog({
                 </Select>
               </div>
             </div>
+            <p className="text-xs text-muted">{TICKER_HELP}</p>
             <div>
               <Label htmlFor="new-name">Nom</Label>
               <Input
@@ -247,6 +246,16 @@ export function TransactionDialog({
           </Button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={confirmAbandon}
+        title="Abandonner la saisie en cours ?"
+        description="Les informations saisies dans ce formulaire seront perdues."
+        confirmLabel="Abandonner"
+        danger
+        onConfirm={onClose}
+        onCancel={() => setConfirmAbandon(false)}
+      />
     </Dialog>
   );
 }
