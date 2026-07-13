@@ -6,33 +6,41 @@ import { cn } from "@/lib/utils";
  * de cartes KPI. Les métriques secondaires vivent sur une ligne de rappel.
  */
 export function DashboardHero({
+  title,
   totalValue,
   invested,
   unrealizedPnL,
   unrealizedPct,
   cash,
   dividends,
+  interest = 0,
   lastPriceDate,
 }: {
+  title?: string;
   totalValue: number;
   invested: number;
   unrealizedPnL: number;
   unrealizedPct: number | null;
   cash: number;
   dividends: number;
+  interest?: number;
   lastPriceDate: string | null;
 }) {
   const pnlClass = unrealizedPnL >= 0 ? "text-pos" : "text-neg";
   return (
-    <section aria-label="Synthèse du portefeuille">
-      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
-        Valeur du portefeuille
-        {lastPriceDate && (
-          <span className="ml-2 normal-case tracking-normal">
-            — cours du {formatDate(lastPriceDate)}
-          </span>
-        )}
-      </p>
+    <section aria-label="Synthèse">
+      {title ? (
+        <h1 className="font-serif text-3xl tracking-tight">{title}</h1>
+      ) : (
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+          Valeur du portefeuille
+          {lastPriceDate && (
+            <span className="ml-2 normal-case tracking-normal">
+              — cours du {formatDate(lastPriceDate)}
+            </span>
+          )}
+        </p>
+      )}
       <div className="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1">
         <p className="font-serif text-5xl tracking-tight tabular-nums md:text-6xl">
           {formatEUR(totalValue)}
@@ -47,7 +55,11 @@ export function DashboardHero({
       <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-3 border-t border-edge pt-4">
         <Metric label="Versé" value={formatEUR(invested)} />
         <Metric label="Liquidités" value={formatEUR(cash)} />
-        <Metric label="Dividendes reçus" value={formatEUR(dividends)} />
+        {dividends > 0 && <Metric label="Dividendes reçus" value={formatEUR(dividends)} />}
+        {interest > 0 && <Metric label="Intérêts perçus" value={formatEUR(interest)} />}
+        {dividends === 0 && interest === 0 && (
+          <Metric label="Dividendes reçus" value={formatEUR(0)} />
+        )}
       </dl>
     </section>
   );

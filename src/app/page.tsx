@@ -1,51 +1,52 @@
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
-import { refreshPrices } from "@/app/transactions/actions";
-import { RefreshButton } from "@/components/dashboard/refresh-button";
 import { AllocationDonut } from "@/components/dashboard/allocation-donut";
 import { DashboardHero } from "@/components/dashboard/hero";
-import { PositionsTable, type PositionRow } from "@/components/dashboard/positions-table";
 import { ValueChart } from "@/components/dashboard/value-chart";
+import { AccountsSummary, type AccountSummaryRow } from "@/components/patrimoine/accounts-summary";
+import { EmergencyGauge } from "@/components/patrimoine/emergency-gauge";
+import { ACCOUNT_TYPE_LABELS } from "@/components/transactions/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate } from "@/lib/format";
 import {
-  computeAllocation,
+  aggregateValueSeries,
+  allocationFromValues,
   computeCashBalance,
+  computeInterest,
   computeInvested,
   computePositions,
   computeValueSeries,
+  type ValuePoint,
 } from "@/lib/portfolio";
+import { getLatestPrices, getPriceHistories, syncPrices, todayISO } from "@/lib/prices";
 import {
-  getLatestPrices,
-  getPriceHealth,
-  getPriceHistories,
-  syncPrices,
-  todayISO,
-} from "@/lib/prices";
-import { getInstruments, getOrCreateDefaultAccount, getTransactionsAsc } from "@/lib/queries";
+  computeEmergencyFund,
+  getInstruments,
+  getManualInstrumentIds,
+  getOrCreateProfile,
+  getTransactionsAsc,
+  listAccounts,
+} from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const account = getOrCreateDefaultAccount();
-  await syncPrices(); // throttlé à 6 h par instrument
+export default async function PatrimoinePage() {
+  await syncPrices();
+  const accounts = listAccounts();
 
-  const txs = getTransactionsAsc(account.id);
-  if (txs.length === 0) {
+  if (accounts.length === 0) {
     return (
       <div className="mx-auto max-w-lg pt-16">
         <Card>
           <CardContent className="space-y-3 py-10 text-center">
             <h1 className="font-serif text-2xl">Bienvenue sur MoneyPlan</h1>
             <p className="text-sm text-ink-2">
-              Commencez par enregistrer votre premier versement et votre premier
-              achat pour voir votre portefeuille prendre forme.
+              Créez votre premier compte (PEA, assurance-vie, livret…) pour
+              commencer à suivre votre patrimoine.
             </p>
             <Link
-              href="/transactions"
+              href="/comptes"
               className="inline-flex h-9 items-center bg-ink px-4 text-sm font-medium text-page transition-opacity duration-150 hover:opacity-85"
             >
-              Ajouter une transaction
+              Créer un compte
             </Link>
           </CardContent>
         </Card>
@@ -54,108 +55,86 @@ export default async function DashboardPage() {
   }
 
   const instruments = getInstruments();
-  const names = new Map(instruments.map((i) => [i.id, i.name]));
-  const symbols = new Map(instruments.map((i) => [i.id, i.symbol]));
   const ids = instruments.map((i) => i.id);
-
+  const manualIds = getManualInstrumentIds();
   const latestPrices = getLatestPrices(ids);
-  const positions = computePositions(txs, latestPrices);
-  const cash = computeCashBalance(txs);
-  const invested = computeInvested(txs);
-  const health = getPriceHealth();
+  const priceHistories = getPriceHistories(ids);
+  const today = todayISO();
 
-  const held = positions.filter((p) => p.quantity > 1e-9);
-  const totalValue = held.reduce((s, p) => s + p.marketValue, 0) + cash;
-  const totalUnrealized = held.reduce((s, p) => s + (p.unrealizedPnL ?? 0), 0);
-  const totalDividends = positions.reduce((s, p) => s + p.dividends, 0);
-  const totalCostBasis = held.reduce((s, p) => s + p.costBasis, 0);
+  let netWorth = 0;
+  let invested = 0;
+  let unrealized = 0;
+  let dividends = 0;
+  let interest = 0;
+  let totalCash = 0;
+  const byAccount: AccountSummaryRow[] = [];
+  const byTypeMap = new Map<string, number>();
+  const seriesList: ValuePoint[][] = [];
 
-  const series = computeValueSeries(txs, getPriceHistories(ids), todayISO());
-  const allocation = computeAllocation(positions, cash, names);
-  const lastPriceDate = [...latestPrices.values()].reduce<string | null>(
-    (latest, p) => (latest == null || p.date > latest ? p.date : latest),
-    null,
+  for (const account of accounts) {
+    const txs = getTransactionsAsc(account.id);
+    if (txs.length === 0) {
+      byAccount.push({ id: account.id, name: account.name, type: account.type, value: 0, weight: 0 });
+      continue;
+    }
+    const positions = computePositions(txs, latestPrices, manualIds);
+    const held = positions.filter((p) => p.held);
+    const cash = computeCashBalance(txs);
+    const value = held.reduce((s, p) => s + p.marketValue, 0) + cash;
+
+    netWorth += value;
+    totalCash += cash;
+    invested += computeInvested(txs);
+    unrealized += held.reduce((s, p) => s + (p.unrealizedPnL ?? 0), 0);
+    dividends += positions.reduce((s, p) => s + p.dividends, 0);
+    interest += computeInterest(txs);
+
+    byAccount.push({ id: account.id, name: account.name, type: account.type, value, weight: 0 });
+    byTypeMap.set(account.type, (byTypeMap.get(account.type) ?? 0) + value);
+    seriesList.push(computeValueSeries(txs, priceHistories, today, manualIds));
+  }
+
+  for (const row of byAccount) row.weight = netWorth > 0 ? row.value / netWorth : 0;
+  byAccount.sort((a, b) => b.value - a.value);
+
+  const allocationByType = allocationFromValues(
+    [...byTypeMap.entries()].map(([type, value]) => ({
+      label: ACCOUNT_TYPE_LABELS[type] ?? type,
+      value,
+    })),
   );
+  const series = aggregateValueSeries(seriesList, today);
 
-  const rows: PositionRow[] = held
-    .sort((a, b) => b.marketValue - a.marketValue)
-    .map((p) => ({
-      instrumentId: p.instrumentId,
-      symbol: symbols.get(p.instrumentId) ?? "?",
-      name: names.get(p.instrumentId) ?? "?",
-      quantity: p.quantity,
-      pru: p.pru,
-      lastPrice: p.lastPrice,
-      marketValue: p.marketValue,
-      unrealizedPnL: p.unrealizedPnL,
-      unrealizedPct: p.unrealizedPct,
-      weight: totalValue > 0 ? p.marketValue / totalValue : 0,
-    }));
+  const profile = getOrCreateProfile();
+  const emergency = computeEmergencyFund();
 
   return (
     <div className="space-y-8">
-      <h1 className="sr-only">Tableau de bord</h1>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <DashboardHero
-            totalValue={totalValue}
-            invested={invested}
-            unrealizedPnL={totalUnrealized}
-            unrealizedPct={totalCostBasis > 0 ? totalUnrealized / totalCostBasis : null}
-            cash={cash}
-            dividends={totalDividends}
-            lastPriceDate={lastPriceDate}
-          />
-        </div>
-        <form action={refreshPrices}>
-          <RefreshButton />
-        </form>
-      </div>
-
-      {health.hasError && (
-        <div className="flex items-start gap-2.5 border border-edge bg-surface px-4 py-3 text-sm text-ink-2">
-          <AlertTriangle
-            className="mt-0.5 size-4 shrink-0 text-[var(--chart-3)]"
-            aria-hidden="true"
-          />
-          <div className="min-w-0">
-            <p className="font-medium text-ink">
-              Cours non actualisés
-              {health.lastPriceDate
-                ? ` (dernier cours : ${formatDate(health.lastPriceDate)})`
-                : ""}
-            </p>
-            <p className="break-words text-xs">
-              {health.errors.map((e, i) => (
-                <span key={e.instrumentId}>
-                  {i > 0 && " · "}
-                  <Link
-                    href={`/positions/${e.instrumentId}`}
-                    className="font-medium text-accent hover:underline"
-                    translate="no"
-                  >
-                    {e.symbol}
-                  </Link>
-                  {` : ${e.error}`}
-                </span>
-              ))}
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              Un « HTTP 404 » signale le plus souvent un ticker Yahoo erroné —
-              cliquez sur le ticker puis « Modifier » pour le corriger
-              (ex. ENGI.PA, PAEEM.PA pour Euronext Paris).
-            </p>
-          </div>
-        </div>
-      )}
+      <DashboardHero
+        title="Patrimoine net"
+        totalValue={netWorth}
+        invested={invested}
+        unrealizedPnL={unrealized}
+        unrealizedPct={null}
+        cash={totalCash}
+        dividends={dividends}
+        interest={interest}
+        lastPriceDate={null}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
         <ValueChart data={series} />
-        <AllocationDonut slices={allocation} />
+        <div className="space-y-6">
+          <EmergencyGauge
+            current={emergency}
+            monthlyExpenses={profile.monthlyExpenses}
+            monthsTarget={profile.emergencyMonthsTarget}
+          />
+          <AllocationDonut slices={allocationByType} title="Répartition par enveloppe" />
+        </div>
       </div>
 
-      <PositionsTable rows={rows} />
+      <AccountsSummary rows={byAccount} />
     </div>
   );
 }

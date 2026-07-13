@@ -58,6 +58,7 @@ export async function syncPrices({ force = false } = {}): Promise<void> {
     })
     .from(instruments)
     .innerJoin(transactions, eq(transactions.instrumentId, instruments.id))
+    .where(eq(instruments.manualValuation, false)) // pas de Yahoo pour les supports manuels
     .groupBy(instruments.id)
     .all();
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteTransaction } from "@/app/transactions/actions";
@@ -16,15 +16,21 @@ import { TransactionDialog } from "./transaction-dialog";
 import { TX_TYPE_LABELS, type InstrumentOption, type TxRow } from "./types";
 
 function amountOf(tx: TxRow): number {
+  const isAmountTrade = tx.quantity == null && tx.unitPrice == null;
   switch (tx.type) {
     case "BUY":
-      return -((tx.quantity ?? 0) * (tx.unitPrice ?? 0) + tx.fees);
+      return isAmountTrade
+        ? -((tx.amount ?? 0) + tx.fees)
+        : -((tx.quantity ?? 0) * (tx.unitPrice ?? 0) + tx.fees);
     case "SELL":
-      return (tx.quantity ?? 0) * (tx.unitPrice ?? 0) - tx.fees;
+      return isAmountTrade
+        ? (tx.amount ?? 0) - tx.fees
+        : (tx.quantity ?? 0) * (tx.unitPrice ?? 0) - tx.fees;
     case "DEPOSIT":
     case "DIVIDEND":
     case "REFUND":
     case "RETURN_OF_CAPITAL":
+    case "INTEREST":
       return tx.amount ?? 0;
     case "WITHDRAWAL":
     case "FEE":
@@ -33,9 +39,13 @@ function amountOf(tx: TxRow): number {
 }
 
 export function TransactionsClient({
+  accountId,
+  accountLabel,
   txs,
   instruments,
 }: {
+  accountId: number;
+  accountLabel: string;
   txs: TxRow[];
   instruments: InstrumentOption[];
 }) {
@@ -44,6 +54,7 @@ export function TransactionsClient({
 
   // Filtres reflétés dans l'URL (partage / retour arrière conservent l'état).
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get("type") ?? "ALL";
   const instrumentFilter = searchParams.get("instrument") ?? "ALL";
@@ -52,7 +63,7 @@ export function TransactionsClient({
     if (value === "ALL") params.delete(key);
     else params.set(key, value);
     const qs = params.toString();
-    router.replace(qs ? `/transactions?${qs}` : "/transactions", { scroll: false });
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
   const filtered = txs.filter(
@@ -74,7 +85,10 @@ export function TransactionsClient({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-serif text-3xl tracking-tight">Transactions</h1>
+        <div>
+          <h1 className="font-serif text-3xl tracking-tight">Transactions</h1>
+          <p className="mt-0.5 text-xs text-muted">{accountLabel}</p>
+        </div>
         <Button
           variant="primary"
           onClick={() => {
@@ -204,6 +218,7 @@ export function TransactionsClient({
         <TransactionDialog
           key={editing?.id ?? "new"}
           open
+          accountId={accountId}
           onClose={() => setDialogOpen(false)}
           instruments={instruments}
           editing={editing}

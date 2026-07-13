@@ -15,6 +15,7 @@ export interface PositionRow {
   unrealizedPnL: number | null;
   unrealizedPct: number | null;
   weight: number;
+  manual?: boolean;
 }
 
 const pctFmt = new Intl.NumberFormat("fr-FR", {
@@ -56,10 +57,16 @@ export function PositionsTable({ rows }: { rows: PositionRow[] }) {
                   {row.name}
                 </span>
               </TD>
-              <TD className="text-right">{formatQty(row.quantity)}</TD>
+              <TD className="text-right">
+                {row.manual ? "—" : formatQty(row.quantity)}
+              </TD>
               <TD className="text-right">{row.pru != null ? formatPrice(row.pru) : "—"}</TD>
               <TD className="text-right">
-                {row.lastPrice != null ? formatPrice(row.lastPrice) : "—"}
+                {row.manual
+                  ? "valorisation"
+                  : row.lastPrice != null
+                    ? formatPrice(row.lastPrice)
+                    : "—"}
               </TD>
               <TD className="text-right font-medium">{formatEUR(row.marketValue)}</TD>
               <TD className="text-right">

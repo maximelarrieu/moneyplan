@@ -25,13 +25,19 @@ const pctFmt = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 1,
 });
 
-export function AllocationDonut({ slices }: { slices: AllocationSlice[] }) {
+export function AllocationDonut({
+  slices,
+  title = "Répartition",
+}: {
+  slices: AllocationSlice[];
+  title?: string;
+}) {
   const reducedMotion = useReducedMotion();
   if (slices.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Répartition</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted">
@@ -44,7 +50,7 @@ export function AllocationDonut({ slices }: { slices: AllocationSlice[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Répartition</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-4 sm:flex-row">
         <div className="h-48 w-48 shrink-0">

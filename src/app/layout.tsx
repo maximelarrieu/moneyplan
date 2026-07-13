@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { Header } from "@/components/header";
+import { listAccounts } from "@/lib/queries";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "MoneyPlan",
@@ -20,6 +23,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const accounts = listAccounts().map((a) => ({
+    id: a.id,
+    name: a.name,
+    type: a.type,
+  }));
   return (
     <html lang="fr" className="h-full antialiased">
       <body className="min-h-full">
@@ -29,7 +37,7 @@ export default function RootLayout({
         >
           Aller au contenu
         </a>
-        <Header />
+        <Header accounts={accounts} />
         <main id="contenu" className="mx-auto max-w-6xl px-5 py-8 md:px-8 md:py-10">
           {children}
         </main>
