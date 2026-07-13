@@ -8,6 +8,7 @@ export const TX_TYPE_LABELS: Record<string, string> = {
   WITHDRAWAL: "Retrait",
   FEE: "Frais",
   REFUND: "Remboursement",
+  RETURN_OF_CAPITAL: "Remboursement de capital",
 };
 
 export interface InstrumentOption {
@@ -18,7 +19,15 @@ export interface InstrumentOption {
 
 export interface TxRow {
   id: number;
-  type: "BUY" | "SELL" | "DIVIDEND" | "DEPOSIT" | "WITHDRAWAL" | "FEE" | "REFUND";
+  type:
+    | "BUY"
+    | "SELL"
+    | "DIVIDEND"
+    | "DEPOSIT"
+    | "WITHDRAWAL"
+    | "FEE"
+    | "REFUND"
+    | "RETURN_OF_CAPITAL";
   date: string;
   quantity: number | null;
   unitPrice: number | null;

@@ -49,7 +49,7 @@ Correspondance avec les libellés habituels des relevés de courtiers
 | Achat / souscription | **Achat** | La case « créer aussi le versement » couvre le flux DCA versement → achat |
 | Vente / cession | **Vente** | |
 | « Paiement de coupon » sur une action | **Dividende** (avec l'instrument) | |
-| « RBT de capital / distrib. +values » | **Dividende** (avec l'instrument) + note | Remboursement d'apport : en toute rigueur il réduit le PRU, le modèle v1 le traite comme un revenu de la position |
+| « RBT de capital / distrib. +values » | **Remboursement de capital** (avec l'instrument) | Réduit le coût de revient (donc le PRU) au lieu de compter comme revenu — le traitement fiscal exact. Si le remboursement dépasse le coût restant, l'excédent est comptabilisé en plus-value réalisée |
 | « Taxe transactions financières » (TTF) | À ajouter aux **frais de l'achat** concerné | Elle fait partie du coût d'acquisition → PRU exact. En « Frais » séparés, le PRU sera légèrement sous-évalué |
 | Versement d'espèces vers le PEA | **Versement** | C'est la référence du « montant investi » (plafond PEA) |
 | Retrait d'espèces | **Retrait** | |

@@ -119,7 +119,7 @@ export async function saveTransaction(form: FormData): Promise<ActionResult> {
         amount: null,
         note,
       };
-    } else if (type === "DIVIDEND") {
+    } else if (type === "DIVIDEND" || type === "RETURN_OF_CAPITAL") {
       const instrumentId = resolveInstrumentId(form);
       const amount = positive(
         "Le montant",

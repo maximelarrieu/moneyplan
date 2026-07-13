@@ -68,6 +68,34 @@ describe("computePositions", () => {
     expect(pos.pru).toBeCloseTo(100);
   });
 
+  it("un remboursement de capital réduit le PRU sans être un revenu", () => {
+    const roc = (instrumentId: number, date: string, amount: number): Tx => ({
+      instrumentId,
+      type: "RETURN_OF_CAPITAL",
+      date,
+      quantity: null,
+      unitPrice: null,
+      fees: 0,
+      amount,
+    });
+    const txs = [buy(1, "2026-01-05", 10, 100, 0), roc(1, "2026-02-01", 100)];
+    const [pos] = computePositions(txs, new Map([[1, { date: "2026-03-01", close: 100 }]]));
+    expect(pos.costBasis).toBeCloseTo(900);
+    expect(pos.pru).toBeCloseTo(90);
+    expect(pos.dividends).toBe(0); // pas un revenu
+    expect(pos.unrealizedPnL).toBeCloseTo(1000 - 900);
+    expect(computeCashBalance(txs)).toBeCloseTo(-1000 + 100);
+    expect(computeInvested(txs)).toBe(0);
+
+    // Au-delà du coût restant, l'excédent devient une plus-value réalisée.
+    const [worn] = computePositions(
+      [buy(1, "2026-01-05", 1, 10, 0), roc(1, "2026-02-01", 25)],
+      new Map(),
+    );
+    expect(worn.costBasis).toBe(0);
+    expect(worn.realizedPnL).toBeCloseTo(15);
+  });
+
   it("agrège les dividendes par instrument", () => {
     const txs = [buy(1, "2026-01-05", 10, 50, 0), dividend(1, "2026-03-10", 7.9)];
     const [pos] = computePositions(txs, new Map());

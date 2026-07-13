@@ -28,6 +28,7 @@ export const TX_TYPES = [
   "WITHDRAWAL",
   "FEE",
   "REFUND", // crédit de liquidités hors versement (ex. frais trop perçus)
+  "RETURN_OF_CAPITAL", // remboursement d'apport : réduit le PRU, pas un revenu
 ] as const;
 
 export const accounts = sqliteTable("accounts", {
