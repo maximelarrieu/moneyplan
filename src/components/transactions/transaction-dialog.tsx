@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { saveTransaction } from "@/app/transactions/actions";
+import { saveTransaction, saveValuation } from "@/app/transactions/actions";
 import { TICKER_HELP } from "@/components/instruments/instrument-dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -15,6 +15,7 @@ import {
   TX_TYPE_LABELS,
   type InstrumentOption,
   type TxRow,
+  type TxTypeKey,
 } from "./types";
 
 export function TransactionDialog({
@@ -32,7 +33,9 @@ export function TransactionDialog({
 }) {
   // Le parent monte/démonte ce composant à chaque ouverture : l'état
   // s'initialise au montage, pas besoin d'effet de resynchronisation.
-  const [type, setType] = React.useState(editing?.type ?? "BUY");
+  const [type, setType] = React.useState<TxTypeKey | "VALUATION">(
+    editing?.type ?? "BUY",
+  );
   const [instrumentId, setInstrumentId] = React.useState<string>(
     editing?.instrumentId?.toString() ?? instruments[0]?.id.toString() ?? "new",
   );
@@ -48,6 +51,8 @@ export function TransactionDialog({
     if (window.matchMedia("(pointer: fine)").matches) typeRef.current?.focus();
   }, []);
 
+  const isValuation = type === "VALUATION";
+  const manualInstruments = instruments.filter((i) => i.manualValuation);
   const needsInstrument =
     type === "BUY" ||
     type === "SELL" ||
@@ -64,19 +69,27 @@ export function TransactionDialog({
 
   // Garde de fermeture : ne pas perdre une saisie en cours sans confirmation.
   const [confirmAbandon, setConfirmAbandon] = React.useState(false);
-  const requestClose = React.useCallback(() => {
+  const requestClose = () => {
     if (dirtyRef.current) setConfirmAbandon(true);
     else onClose();
-  }, [onClose]);
+  };
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     setError(null);
     startTransition(async () => {
-      const result = await saveTransaction(form);
+      const result = isValuation
+        ? await saveValuation(form)
+        : await saveTransaction(form);
       if (result.ok) {
-        toast.success(editing ? "Transaction modifiée" : "Transaction ajoutée");
+        toast.success(
+          isValuation
+            ? "Valorisation enregistrée"
+            : editing
+              ? "Transaction modifiée"
+              : "Transaction ajoutée",
+        );
         onClose();
       } else {
         setError(result.error ?? "Une erreur est survenue — vérifiez la saisie.");
@@ -109,13 +122,18 @@ export function TransactionDialog({
               name="type"
               ref={typeRef}
               value={type}
-              onChange={(e) => setType(e.target.value as TxRow["type"])}
+              onChange={(e) =>
+                setType(e.target.value as TxTypeKey | "VALUATION")
+              }
             >
               {Object.entries(TX_TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
+              {!editing && (
+                <option value="VALUATION">Valorisation (support manuel)</option>
+              )}
             </Select>
           </div>
           <div>
@@ -130,9 +148,52 @@ export function TransactionDialog({
           </div>
         </div>
 
-        {TX_TYPE_HINTS[type] && (
-          <p className="-mt-2 text-xs text-muted">{TX_TYPE_HINTS[type]}</p>
+        {(isValuation ? true : Boolean(TX_TYPE_HINTS[type])) && (
+          <p className="-mt-2 text-xs text-muted">
+            {isValuation
+              ? "Met à jour la valeur totale d’un support à valorisation manuelle (fonds €, FCPE…)."
+              : TX_TYPE_HINTS[type]}
+          </p>
         )}
+
+        {isValuation &&
+          (manualInstruments.length === 0 ? (
+            <p className="border border-edge bg-ink/2 px-3 py-2 text-xs text-ink-2">
+              Aucun support à valorisation manuelle. Créez-en un d’abord via un
+              achat en cochant « Support à valorisation manuelle ».
+            </p>
+          ) : (
+            <>
+              <div>
+                <Label htmlFor="val-instrument">Support</Label>
+                <Select
+                  id="val-instrument"
+                  name="instrumentId"
+                  defaultValue={String(manualInstruments[0].id)}
+                >
+                  {manualInstruments.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.symbol} — {i.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="tx-value">Valeur totale (€)</Label>
+                <Input
+                  id="tx-value"
+                  name="value"
+                  inputMode="decimal"
+                  placeholder="2027,54"
+                  required
+                />
+                <p className="mt-1 text-xs text-muted">
+                  La valeur totale actuelle du support (relevé), pas une valeur
+                  par part.
+                </p>
+              </div>
+            </>
+          ))}
 
         {needsInstrument && (
           <div>
@@ -277,7 +338,7 @@ export function TransactionDialog({
           </div>
         )}
 
-        {!isTrade && (
+        {!isTrade && !isValuation && (
           <div>
             <Label htmlFor="tx-amount">Montant (€)</Label>
             <Input
@@ -298,10 +359,12 @@ export function TransactionDialog({
           </label>
         )}
 
-        <div>
-          <Label htmlFor="tx-note">Note (optionnel)</Label>
-          <Input id="tx-note" name="note" defaultValue={editing?.note ?? ""} />
-        </div>
+        {!isValuation && (
+          <div>
+            <Label htmlFor="tx-note">Note (optionnel)</Label>
+            <Input id="tx-note" name="note" defaultValue={editing?.note ?? ""} />
+          </div>
+        )}
 
         {error && (
           <p role="alert" className="border border-neg/40 px-3 py-2 text-sm text-neg">
